@@ -1,0 +1,359 @@
+// OpenCalc Database Schema
+// Begrotingsprogramma voor de bouwsector
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hashed password for credentials auth
+  emailVerified DateTime?
+  image         String?
+
+  // Company info
+  companyName   String?
+  companyAddress String?
+  companyPhone  String?
+  kvkNumber     String?   // KvK nummer
+  btwNumber     String?   // BTW nummer
+
+  // Settings
+  defaultMarkup     Float   @default(10)  // Default opslag %
+  defaultLaborRate  Float   @default(45)  // Default uurloon
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  libraries     CostLibrary[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// PROJECTS & CLIENTS
+// ============================================
+
+model Client {
+  id            String    @id @default(cuid())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  postalCode    String?
+  notes         String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projects      Project[]
+
+  @@map("clients")
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  projectNumber String?   // User-defined project number
+  name          String
+  description   String?
+  address       String?
+  city          String?
+  postalCode    String?
+
+  status        String    @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+
+  // Dates
+  startDate     DateTime?
+  endDate       DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  estimates     Estimate[]
+
+  @@map("projects")
+}
+
+// ============================================
+// ESTIMATES (BEGROTINGEN)
+// ============================================
+
+model Estimate {
+  id            String    @id @default(cuid())
+  name          String
+  version       Int       @default(1)
+  description   String?
+
+  status        String    @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+
+  // Totals (calculated)
+  totalLabor      Float   @default(0)
+  totalMaterial   Float   @default(0)
+  totalEquipment  Float   @default(0)
+  totalSubcontr   Float   @default(0)
+  subtotal        Float   @default(0)
+
+  // Markups
+  generalCostsPercent Float @default(0)   // Algemene kosten %
+  generalCostsAmount  Float @default(0)
+  profitPercent       Float @default(0)   // Winst %
+  profitAmount        Float @default(0)
+  riskPercent         Float @default(0)   // Risico %
+  riskAmount          Float @default(0)
+
+  totalExclVat    Float   @default(0)
+  vatPercent      Float   @default(21)
+  vatAmount       Float   @default(0)
+  totalInclVat    Float   @default(0)
+
+  // Validity
+  validUntil      DateTime?
+
+  notes           String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  chapters        EstimateChapter[]
+  lines           EstimateLine[]
+
+  @@map("estimates")
+}
+
+model EstimateChapter {
+  id            String    @id @default(cuid())
+  code          String    // NL-SfB or STABU code
+  name          String
+  sortOrder     Int       @default(0)
+
+  // Subtotals (calculated)
+  totalLabor      Float   @default(0)
+  totalMaterial   Float   @default(0)
+  totalEquipment  Float   @default(0)
+  totalSubcontr   Float   @default(0)
+  subtotal        Float   @default(0)
+
+  // Relations
+  estimateId    String
+  estimate      Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  parentId      String?
+  parent        EstimateChapter?  @relation("ChapterHierarchy", fields: [parentId], references: [id])
+  children      EstimateChapter[] @relation("ChapterHierarchy")
+
+  lines         EstimateLine[]
+
+  @@map("estimate_chapters")
+}
+
+model EstimateLine {
+  id            String    @id @default(cuid())
+  sortOrder     Int       @default(0)
+
+  // From library or manual
+  code          String?
+  description   String
+  specification String?   // Detailed specification
+
+  // Quantities
+  quantity      Float     @default(0)
+  unit          String    @default("st")  // st, m, m2, m3, kg, uur, etc.
+
+  // Costs
+  laborHours    Float     @default(0)
+  laborRate     Float     @default(45)
+  laborCost     Float     @default(0)     // Calculated: hours * rate
+
+  materialCost  Float     @default(0)
+  equipmentCost Float     @default(0)
+  subcontrCost  Float     @default(0)     // Onderaanneming
+
+  unitPrice     Float     @default(0)     // Total per unit
+  totalPrice    Float     @default(0)     // unitPrice * quantity
+
+  notes         String?
+
+  // Source tracking
+  libraryItemId String?
+  libraryItem   LibraryItem? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
+
+  // Relations
+  estimateId    String
+  estimate      Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  chapterId     String?
+  chapter       EstimateChapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  @@map("estimate_lines")
+}
+
+// ============================================
+// COST LIBRARY (KOSTENBIBLIOTHEEK)
+// ============================================
+
+model CostLibrary {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  version       String?
+
+  standard      String    @default("CUSTOM") // NL_SFB, STABU, RAW, CUSTOM
+
+  isPublic      Boolean   @default(false)  // Shared library
+  isDefault     Boolean   @default(false)  // Default library for new users
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String?   // null for system libraries
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items         LibraryItem[]
+  categories    LibraryCategory[]
+
+  @@map("cost_libraries")
+}
+
+model LibraryCategory {
+  id            String    @id @default(cuid())
+  code          String    // e.g., "21" for NL-SfB Buitenwanden
+  name          String    // e.g., "Buitenwanden"
+  description   String?
+  sortOrder     Int       @default(0)
+
+  // Relations
+  libraryId     String
+  library       CostLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  parentId      String?
+  parent        LibraryCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children      LibraryCategory[] @relation("CategoryHierarchy")
+
+  items         LibraryItem[]
+
+  @@unique([libraryId, code])
+  @@map("library_categories")
+}
+
+model LibraryItem {
+  id            String    @id @default(cuid())
+  code          String    // Full code like "21.11.01" or "22.01.01.01"
+  description   String
+  specification String?   // Detailed specification text
+
+  unit          String    @default("st")
+
+  // Cost breakdown
+  laborHours    Float     @default(0)
+  laborRate     Float     @default(45)
+  materialCost  Float     @default(0)
+  equipmentCost Float     @default(0)
+  subcontrCost  Float     @default(0)
+
+  // Calculated unit price
+  unitPrice     Float     @default(0)
+
+  // Metadata
+  notes         String?
+  isActive      Boolean   @default(true)
+
+  // Price history tracking
+  lastPriceUpdate DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  libraryId     String
+  library       CostLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  categoryId    String?
+  category      LibraryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  estimateLines EstimateLine[]
+
+  @@unique([libraryId, code])
+  @@map("library_items")
+}
+
+// ============================================
+// SETTINGS & CONFIGURATION
+// ============================================
+
+model Unit {
+  id            String    @id @default(cuid())
+  code          String    @unique // st, m, m2, m3, kg, uur, etc.
+  name          String    // stuks, meter, vierkante meter, etc.
+  symbol        String    // st, m, m², m³, kg, u
+
+  @@map("units")
+}
