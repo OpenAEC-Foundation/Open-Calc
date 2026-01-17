@@ -4,20 +4,15 @@ import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, MoreHorizontal, FileText } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, FolderOpen, FileText } from "lucide-react";
+import { ProjectCardMenu } from "@/components/project-card-menu";
 
 const statusColors: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-800",
-  ACTIVE: "bg-green-100 text-green-800",
-  COMPLETED: "bg-blue-100 text-blue-800",
-  CANCELLED: "bg-red-100 text-red-800",
+  DRAFT: "bg-slate-100 text-slate-700 border border-slate-200",
+  ACTIVE: "bg-emerald-50 text-emerald-700 border border-emerald-200",
+  COMPLETED: "bg-blue-50 text-blue-700 border border-blue-200",
+  CANCELLED: "bg-red-50 text-red-700 border border-red-200",
+  TEMPLATE: "bg-violet-50 text-violet-700 border border-violet-200",
 };
 
 const statusLabels: Record<string, string> = {
@@ -25,6 +20,7 @@ const statusLabels: Record<string, string> = {
   ACTIVE: "Actief",
   COMPLETED: "Afgerond",
   CANCELLED: "Geannuleerd",
+  TEMPLATE: "Template",
 };
 
 async function getProjects(userId: string) {
@@ -83,69 +79,50 @@ export default async function ProjectsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((project) => (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-lg">
-                      <Link
-                        href={`/projects/${project.id}`}
-                        className="hover:underline"
-                      >
-                        {project.name}
-                      </Link>
-                    </CardTitle>
-                    <CardDescription>
-                      {project.projectNumber && (
-                        <span className="mr-2">#{project.projectNumber}</span>
-                      )}
-                      {project.client?.name || "Geen klant"}
-                    </CardDescription>
+            <Link key={project.id} href={`/projects/${project.id}`} className="block">
+              <Card className="group hover:shadow-lg transition-all duration-200 hover:border-blue-200 overflow-hidden cursor-pointer h-full">
+                <div className="h-1 bg-gradient-to-r from-blue-500 to-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100 flex-shrink-0 group-hover:bg-blue-200 transition-colors">
+                          <FolderOpen className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div className="min-w-0">
+                          <CardTitle className="text-base truncate group-hover:text-blue-600 transition-colors">
+                            {project.name}
+                          </CardTitle>
+                          {project.projectNumber && (
+                            <span className="text-xs text-muted-foreground font-mono">#{project.projectNumber}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <ProjectCardMenu projectId={project.id} />
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem asChild>
-                        <Link href={`/projects/${project.id}`}>
-                          Openen
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild>
-                        <Link href={`/projects/${project.id}/edit`}>
-                          Bewerken
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link href={`/projects/${project.id}/estimates/new`}>
-                          Nieuwe begroting
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                    <span>{project._count.estimates} begroting(en)</span>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <CardDescription className="mb-3">
+                    {project.client?.name || "Geen klant gekoppeld"}
+                  </CardDescription>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                      <FileText className="h-3.5 w-3.5" />
+                      <span>{project._count.estimates} begroting(en)</span>
+                    </div>
+                    <Badge variant="outline" className={statusColors[project.status]}>
+                      {statusLabels[project.status] || project.status}
+                    </Badge>
                   </div>
-                  <Badge className={statusColors[project.status]}>
-                    {statusLabels[project.status]}
-                  </Badge>
-                </div>
-                {project.address && (
-                  <p className="text-sm text-muted-foreground mt-2 truncate">
-                    {project.address}, {project.city}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
+                  {project.address && (
+                    <p className="text-xs text-muted-foreground mt-3 truncate border-t pt-3">
+                      {project.address}, {project.city}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
       )}

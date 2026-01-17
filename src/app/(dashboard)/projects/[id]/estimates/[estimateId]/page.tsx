@@ -102,10 +102,10 @@ export default async function EstimateDetailPage({
   ];
 
   const calculatedTotals = {
-    labor: allLines.reduce((sum, line) => sum + line.laborCost, 0),
-    material: allLines.reduce((sum, line) => sum + line.materialCost, 0),
-    equipment: allLines.reduce((sum, line) => sum + line.equipmentCost, 0),
-    subcontr: allLines.reduce((sum, line) => sum + line.subcontrCost, 0),
+    labor: allLines.reduce((sum, line) => sum + (line.laborCost * line.quantity), 0),
+    material: allLines.reduce((sum, line) => sum + (line.materialCost * line.quantity), 0),
+    equipment: allLines.reduce((sum, line) => sum + (line.equipmentCost * line.quantity), 0),
+    subcontr: allLines.reduce((sum, line) => sum + (line.subcontrCost * line.quantity), 0),
   };
 
   const subtotal =

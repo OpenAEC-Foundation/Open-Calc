@@ -3,21 +3,27 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 /**
- * This seed creates a template estimate based on the waterwoning project
- * Waterwoning Lange Muiderweg 565 s, Weesp
+ * This seed creates a template estimate for a floating house project
+ * Demo project for OpenCalc
  * Total: €754,378.24 incl. BTW
  */
 async function main() {
   console.log("Seeding waterwoning template...");
 
-  // Get existing test user
-  const user = await prisma.user.findFirst({
+  // Get or create test user
+  let user = await prisma.user.findFirst({
     where: { email: "test@opencalc.nl" },
   });
 
   if (!user) {
-    console.error("Test user not found. Please run the main seed first.");
-    process.exit(1);
+    user = await prisma.user.create({
+      data: {
+        email: "test@opencalc.nl",
+        name: "Test Gebruiker",
+        password: "demo123",
+      },
+    });
+    console.log("Test user created");
   }
 
   // Create client
@@ -26,12 +32,12 @@ async function main() {
     update: {},
     create: {
       id: "waterwoning-client",
-      name: "Henriëtte Westland & Arno Timmermans",
-      email: "info@waterwoning.nl",
-      phone: "06-12345678",
-      address: "Lange Muiderweg 565 s",
-      city: "Weesp",
-      postalCode: "1382 LR",
+      name: "Familie De Vries",
+      email: "familie@voorbeeld.nl",
+      phone: "06-00000000",
+      address: "Waterweg 100",
+      city: "Waterstad",
+      postalCode: "1234 AB",
     },
   });
 
@@ -41,13 +47,13 @@ async function main() {
     update: {},
     create: {
       id: "waterwoning-template",
-      name: "Waterwoning Lange Muiderweg 565 s",
-      projectNumber: "AC288",
-      description: "Drijvende woning in Weesp - Template begroting",
+      name: "Drijvende Woning Demo",
+      projectNumber: "DEMO-001",
+      description: "Drijvende woning - Template begroting voor demonstratiedoeleinden",
       status: "TEMPLATE",
-      address: "Lange Muiderweg 565 s",
-      city: "Weesp",
-      postalCode: "1382 LR",
+      address: "Waterweg 100",
+      city: "Waterstad",
+      postalCode: "1234 AB",
       clientId: client.id,
       userId: user.id,
     },

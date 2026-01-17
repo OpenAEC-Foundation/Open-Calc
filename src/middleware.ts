@@ -6,8 +6,8 @@ export default auth((req) => {
   const { pathname } = req.nextUrl;
 
   // Public routes
-  const publicRoutes = ["/", "/login", "/register"];
-  const isPublicRoute = publicRoutes.includes(pathname);
+  const publicRoutes = ["/", "/login", "/register", "/library"];
+  const isPublicRoute = publicRoutes.includes(pathname) || pathname.startsWith("/library");
 
   // API routes are handled separately
   if (pathname.startsWith("/api")) {

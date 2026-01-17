@@ -1,36 +1,191 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenCalc
 
-## Getting Started
+<p align="center">
+  <img src="public/icons/icon-192x192.png" alt="OpenCalc Logo" width="80"/>
+</p>
 
-First, run the development server:
+<p align="center">
+  <strong>Open-source begrotingssoftware voor de bouwsector</strong>
+</p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+<p align="center">
+  <a href="#product-varianten">Varianten</a> •
+  <a href="#features">Features</a> •
+  <a href="#installatie">Installatie</a> •
+  <a href="#api">API</a> •
+  <a href="#technologie">Technologie</a> •
+  <a href="#bijdragen">Bijdragen</a>
+</p>
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Over OpenCalc
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+OpenCalc is een moderne, open-source webapplicatie voor het maken van bouwkostenbegrotingen. Ontworpen voor de Nederlandse bouwsector, van ZZP'ers tot professionele calculatiekantoren.
 
-## Learn More
+## Product Varianten
 
-To learn more about Next.js, take a look at the following resources:
+OpenCalc is beschikbaar in verschillende edities:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Editie | Doelgroep | Interface | Status |
+|--------|-----------|-----------|--------|
+| **OpenCalc-SBO** | ZZP'ers, kleine aannemers | Card-based, wizard | Actief |
+| **OpenCalc Extended** | MKB bedrijven | Grid/Excel-achtig | In ontwikkeling |
+| **OpenCalc Estimator** | Professionele calculators | Grid/Excel-achtig | Gepland |
+| **OpenCalc API/CLI** | Developers | REST API + Python | Gepland |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### OpenCalc-SBO (Small Business Owners)
+De huidige versie - eenvoudig te gebruiken voor kleine bedrijven. Card-based interface met wizard-achtige flows.
 
-## Deploy on Vercel
+### OpenCalc Extended
+Uitgebreide versie met Excel-achtige grid interface. Volledig keyboard-navigeerbaar (Tab, pijltjes), Excel export, geavanceerde rapportage.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### OpenCalc Estimator
+Volledige professionele versie met IFC/BIM integratie, team samenwerking, multi-valuta en onbeperkte features.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### OpenCalc API/CLI
+Python SDK en command-line interface voor automatisering en integratie met andere systemen.
+
+> Zie [docs/ROADMAP.md](docs/ROADMAP.md) voor de volledige product roadmap en implementatie planning.
+
+## Features
+
+### Begrotingen
+- **Projectbeheer** - Organiseer begrotingen per project met klantgegevens
+- **Hoofdstukken** - Structureer begrotingen met NL-SfB of STABU codering
+- **Kostenposten** - Gedetailleerde regels met arbeid, materiaal en onderaanneming
+- **Automatische berekeningen** - Subtotalen, opslagen, BTW en eindtotalen
+- **Versies** - Meerdere versies per begroting
+
+### Kostenbibliotheek
+- **NL-SfB** - Nederlandse SfB elementenmethode
+- **STABU** - STABU werksoorten systematiek
+- **RAW** - RAW GWW systematiek
+- **Eigen posten** - Maak je eigen kostenbibliotheek
+- **Specificatieteksten** - Gedetailleerde technische specificaties
+- **Offerteteksten** - Rich text met afbeeldingen voor offertes
+
+### Export & Rapportage
+- **PDF Export** - Professionele offertes met bedrijfslogo
+- **ODS Export** - LibreOffice/Excel spreadsheet
+- **IFC Export** - BIM-compatibel kostenmodel
+- **Rapportpreview** - Bekijk en print direct vanuit de browser
+
+### Integraties
+- **ERPNext** - Importeer projecten en klanten uit ERPNext
+- **REST API** - Volledige API voor externe koppelingen
+
+### Installatie
+- **PWA** - Installeerbaar als desktop app op Windows en Linux
+- **Offline** - Werkt offline na installatie (basis functies)
+
+## Installatie
+
+### Vereisten
+- Node.js 18 of hoger
+- npm of pnpm
+
+### Stappen
+
+1. **Clone de repository**
+   ```bash
+   git clone https://github.com/OpenAEC-Foundation/Open-Calc.git
+   cd Open-Calc
+   ```
+
+2. **Installeer dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configureer environment**
+   ```bash
+   cp .env.example .env
+   # Pas de DATABASE_URL en AUTH_SECRET aan
+   ```
+
+4. **Initialiseer database**
+   ```bash
+   npx prisma db push
+   npx prisma db seed
+   ```
+
+5. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+6. Open [http://localhost:3000](http://localhost:3000)
+
+### Als PWA installeren
+
+1. Open de app in Chrome of Edge
+2. Klik op het installeer-icoon in de adresbalk
+3. OpenCalc verschijnt als desktop applicatie
+
+## API
+
+OpenCalc biedt een RESTful API voor alle functionaliteit.
+
+### Endpoints
+
+#### Projecten
+| Methode | Endpoint | Beschrijving |
+|---------|----------|--------------|
+| GET | `/api/projects` | Lijst alle projecten |
+| POST | `/api/projects` | Maak nieuw project |
+| GET | `/api/projects/:id` | Haal project op |
+| PATCH | `/api/projects/:id` | Update project |
+| DELETE | `/api/projects/:id` | Verwijder project |
+
+#### Begrotingen
+| Methode | Endpoint | Beschrijving |
+|---------|----------|--------------|
+| GET | `/api/projects/:id/estimates` | Lijst begrotingen |
+| POST | `/api/projects/:id/estimates` | Maak begroting |
+| GET | `/api/projects/:id/estimates/:estimateId` | Haal begroting op |
+| PATCH | `/api/projects/:id/estimates/:estimateId` | Update begroting |
+
+#### Export
+| Methode | Endpoint | Beschrijving |
+|---------|----------|--------------|
+| GET | `/api/projects/:id/estimates/:estimateId/export/ods` | Export ODS |
+| GET | `/api/projects/:id/estimates/:estimateId/export/ifc` | Export IFC |
+
+## Technologie
+
+- **[Next.js 15](https://nextjs.org/)** - React framework met App Router
+- **[React 19](https://react.dev/)** - UI library
+- **[TypeScript](https://www.typescriptlang.org/)** - Type-safe JavaScript
+- **[Prisma](https://www.prisma.io/)** - Database ORM
+- **[SQLite](https://www.sqlite.org/)** - Database (ontwikkeling)
+- **[NextAuth.js v5](https://next-auth.js.org/)** - Authenticatie
+- **[Tailwind CSS](https://tailwindcss.com/)** - Styling
+- **[shadcn/ui](https://ui.shadcn.com/)** - UI componenten
+
+## Ondersteunde Standaarden
+
+- **NL-SfB** - Nederlandse SfB elementenmethode
+- **STABU** - STABU werksoorten systematiek
+- **RAW** - RAW GWW systematiek
+- **IFC** - Industry Foundation Classes (BIM)
+
+## Bijdragen
+
+Bijdragen zijn welkom!
+
+1. Fork de repository
+2. Maak een feature branch (`git checkout -b feature/nieuwe-feature`)
+3. Commit je wijzigingen (`git commit -m 'Voeg nieuwe feature toe'`)
+4. Push naar de branch (`git push origin feature/nieuwe-feature`)
+5. Open een Pull Request
+
+## Licentie
+
+Dit project is gelicenseerd onder de MIT License.
+
+---
+
+<p align="center">
+  Gemaakt met ❤️ voor de Nederlandse bouwsector
+</p>

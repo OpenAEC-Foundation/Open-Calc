@@ -41,6 +41,7 @@ export async function GET(request: Request) {
       include: {
         category: { select: { code: true, name: true } },
         library: { select: { name: true, standard: true } },
+        _count: { select: { images: true } },
       },
     });
 

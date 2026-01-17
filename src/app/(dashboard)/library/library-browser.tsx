@@ -22,7 +22,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Library, Filter } from "lucide-react";
+import { Search, Library, Filter, FileText, ChevronDown, ChevronUp, Edit, Image } from "lucide-react";
+import { LibraryItemDialog } from "./library-item-dialog";
 
 interface CostLibrary {
   id: string;
@@ -40,6 +41,8 @@ interface LibraryItem {
   id: string;
   code: string;
   description: string;
+  specification: string | null;
+  offerText: string | null;
   unit: string;
   laborHours: number;
   laborRate: number;
@@ -48,6 +51,7 @@ interface LibraryItem {
   unitPrice: number;
   category: { code: string; name: string } | null;
   library: { name: string; standard: string };
+  _count?: { images: number };
 }
 
 interface LibraryBrowserProps {
@@ -82,8 +86,21 @@ export function LibraryBrowser({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchQuery || "");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [editItemId, setEditItemId] = useState<string | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const currentLibrary = libraries.find((l) => l.id === selectedLibrary);
+
+  function toggleExpand(itemId: string) {
+    const newExpanded = new Set(expandedItems);
+    if (newExpanded.has(itemId)) {
+      newExpanded.delete(itemId);
+    } else {
+      newExpanded.add(itemId);
+    }
+    setExpandedItems(newExpanded);
+  }
 
   function updateFilters(params: Record<string, string | undefined>) {
     const newParams = new URLSearchParams(searchParams.toString());
@@ -109,6 +126,11 @@ export function LibraryBrowser({
       style: "currency",
       currency: "EUR",
     }).format(amount);
+  }
+
+  function openEditDialog(itemId: string) {
+    setEditItemId(itemId);
+    setEditDialogOpen(true);
   }
 
   return (
@@ -202,44 +224,109 @@ export function LibraryBrowser({
                     <TableHead className="text-right w-[100px]">Materiaal</TableHead>
                     <TableHead className="text-right w-[120px]">Eenheidsprijs</TableHead>
                     <TableHead className="w-[80px]">Bron</TableHead>
+                    <TableHead className="w-[60px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <TableRow key={item.id} className="cursor-pointer hover:bg-muted/50">
-                      <TableCell className="font-mono text-sm">
-                        {item.code}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{item.description}</p>
-                          {item.category && (
-                            <p className="text-xs text-muted-foreground">
-                              {item.category.code} - {item.category.name}
-                            </p>
+                    <>
+                      <TableRow
+                        key={item.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={() => item.specification && toggleExpand(item.id)}
+                      >
+                        <TableCell className="font-mono text-sm">
+                          <div className="flex items-center gap-2">
+                            {item.specification && (
+                              expandedItems.has(item.id) ? (
+                                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              )
+                            )}
+                            {item.code}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{item.description}</p>
+                            {item.category && (
+                              <p className="text-xs text-muted-foreground">
+                                {item.category.code} - {item.category.name}
+                              </p>
+                            )}
+                            {(item.specification || item.offerText) && !expandedItems.has(item.id) && (
+                              <div className="flex items-center gap-2 mt-1">
+                                {item.specification && (
+                                  <span className="text-xs text-blue-600 flex items-center gap-1">
+                                    <FileText className="h-3 w-3" />
+                                    Spec
+                                  </span>
+                                )}
+                                {item.offerText && (
+                                  <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <Edit className="h-3 w-3" />
+                                    Offerte
+                                  </span>
+                                )}
+                                {item._count?.images && item._count.images > 0 && (
+                                  <span className="text-xs text-purple-600 flex items-center gap-1">
+                                    <Image className="h-3 w-3" />
+                                    {item._count.images}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{item.unit}</TableCell>
+                        <TableCell className="text-right">
+                          {item.laborHours > 0 && (
+                            <span className="text-sm">
+                              {item.laborHours.toFixed(2)} u
+                            </span>
                           )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{item.unit}</TableCell>
-                      <TableCell className="text-right">
-                        {item.laborHours > 0 && (
-                          <span className="text-sm">
-                            {item.laborHours.toFixed(2)} u
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(item.materialCost)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(item.unitPrice)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={standardColors[item.library.standard]}>
-                          {standardLabels[item.library.standard]}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(item.materialCost)}
+                        </TableCell>
+                        <TableCell className="text-right font-medium">
+                          {formatCurrency(item.unitPrice)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={standardColors[item.library.standard]}>
+                            {standardLabels[item.library.standard]}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditDialog(item.id);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                      {item.specification && expandedItems.has(item.id) && (
+                        <TableRow key={`${item.id}-spec`} className="bg-muted/30">
+                          <TableCell colSpan={7} className="p-4">
+                            <div className="bg-background rounded-lg p-4 border">
+                              <h4 className="font-medium mb-2 flex items-center gap-2">
+                                <FileText className="h-4 w-4" />
+                                Specificatietekst
+                              </h4>
+                              <pre className="whitespace-pre-wrap text-sm text-muted-foreground font-sans">
+                                {item.specification}
+                              </pre>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </>
                   ))}
                 </TableBody>
               </Table>
@@ -247,6 +334,12 @@ export function LibraryBrowser({
           </CardContent>
         </Card>
       )}
+
+      <LibraryItemDialog
+        itemId={editItemId}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
     </div>
   );
 }

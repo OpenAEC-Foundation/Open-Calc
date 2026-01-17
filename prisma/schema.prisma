@@ -25,13 +25,24 @@ model User {
   // Company info
   companyName   String?
   companyAddress String?
+  companyCity   String?
+  companyPostalCode String?
   companyPhone  String?
+  companyEmail  String?
+  companyWebsite String?
+  companyLogo   String?   // Path to logo image
   kvkNumber     String?   // KvK nummer
   btwNumber     String?   // BTW nummer
+  ibanNumber    String?   // IBAN bankrekening
 
   // Settings
   defaultMarkup     Float   @default(10)  // Default opslag %
   defaultLaborRate  Float   @default(45)  // Default uurloon
+
+  // ERPNext Integration
+  erpnextUrl        String?   // ERPNext instance URL
+  erpnextApiKey     String?   // ERPNext API Key
+  erpnextApiSecret  String?   // ERPNext API Secret
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
@@ -308,7 +319,8 @@ model LibraryItem {
   id            String    @id @default(cuid())
   code          String    // Full code like "21.11.01" or "22.01.01.01"
   description   String
-  specification String?   // Detailed specification text
+  specification String?   // Detailed specification text (plain text)
+  offerText     String?   // Rich text for quotes/offers (HTML)
 
   unit          String    @default("st")
 
@@ -340,9 +352,30 @@ model LibraryItem {
   category      LibraryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   estimateLines EstimateLine[]
+  images        LibraryItemImage[]
 
   @@unique([libraryId, code])
   @@map("library_items")
+}
+
+model LibraryItemImage {
+  id            String    @id @default(cuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String    // Storage path
+  url           String?   // Public URL if applicable
+  alt           String?   // Alt text for accessibility
+  caption       String?
+
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  libraryItemId String
+  libraryItem   LibraryItem @relation(fields: [libraryItemId], references: [id], onDelete: Cascade)
+
+  @@map("library_item_images")
 }
 
 // ============================================

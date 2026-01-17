@@ -31,12 +31,19 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, Loader2, Library, Plus, Check } from "lucide-react";
+import { Search, Loader2, Library, Plus, Check, FileText } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LibraryItem {
   id: string;
   code: string;
   description: string;
+  specification: string | null;
   unit: string;
   laborHours: number;
   laborRate: number;
@@ -300,7 +307,24 @@ export function LibrarySelector({
                         <TableCell className="font-mono text-sm">{item.code}</TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{item.description}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{item.description}</p>
+                              {item.specification && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                                    </TooltipTrigger>
+                                    <TooltipContent side="right" className="max-w-md">
+                                      <pre className="whitespace-pre-wrap text-xs font-sans">
+                                        {item.specification.substring(0, 300)}
+                                        {item.specification.length > 300 && "..."}
+                                      </pre>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                            </div>
                             {item.category && (
                               <p className="text-xs text-muted-foreground">
                                 {item.category.name}

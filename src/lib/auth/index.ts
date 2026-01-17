@@ -42,8 +42,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
 
         // Simple password check for demo (in production, use bcrypt)
-        // For now, we'll use a simple comparison
-        // TODO: Implement proper password hashing with bcrypt
         const passwordMatch = user.password === password;
 
         if (!passwordMatch) {

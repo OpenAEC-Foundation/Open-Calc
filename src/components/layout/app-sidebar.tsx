@@ -70,10 +70,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="border-b px-4 py-3">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Calculator className="h-6 w-6 text-blue-600" />
-          <span className="text-lg font-bold">OpenCalc</span>
+      <SidebarHeader className="border-b px-4 py-4">
+        <Link href="/dashboard" className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 shadow-md">
+            <Calculator className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">OpenCalc</span>
+            <p className="text-[10px] text-muted-foreground -mt-0.5">Begrotingssoftware</p>
+          </div>
         </Link>
       </SidebarHeader>
 
@@ -121,27 +126,27 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t p-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="w-full">
-                  <div className="flex items-center gap-2 flex-1">
-                    <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-sm font-medium text-blue-600">
+                <SidebarMenuButton className="w-full h-auto py-2 hover:bg-blue-50/80">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="h-9 w-9 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-sm">
+                      <span className="text-sm font-semibold text-white">
                         {session?.user?.name?.[0]?.toUpperCase() || "U"}
                       </span>
                     </div>
-                    <div className="flex-1 text-left">
+                    <div className="flex-1 text-left min-w-0">
                       <p className="text-sm font-medium truncate">
                         {session?.user?.name || "Gebruiker"}
                       </p>
-                      <p className="text-xs text-gray-500 truncate">
+                      <p className="text-xs text-muted-foreground truncate">
                         {session?.user?.email}
                       </p>
                     </div>
-                    <ChevronDown className="h-4 w-4" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </SidebarMenuButton>
               </DropdownMenuTrigger>
