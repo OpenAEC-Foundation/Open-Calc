@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -26,15 +26,9 @@ async function getDashboardStats(userId: string) {
 }
 
 export default async function DashboardPage() {
-  const session = await auth();
+  const userId = await getDefaultUserId();
 
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  const { projectCount, estimateCount, recentProjects } = await getDashboardStats(
-    session.user.id
-  );
+  const { projectCount, estimateCount, recentProjects } = await getDashboardStats(userId);
 
   return (
     <div className="space-y-6">
@@ -42,7 +36,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Welkom terug, {session.user.name?.split(" ")[0] || "gebruiker"}!
+            Welkom bij OpenCalc!
           </p>
         </div>
         <Button asChild>

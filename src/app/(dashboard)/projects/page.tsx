@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,13 +35,8 @@ async function getProjects(userId: string) {
 }
 
 export default async function ProjectsPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  const projects = await getProjects(session.user.id);
+  const userId = await getDefaultUserId();
+  const projects = await getProjects(userId);
 
   return (
     <div className="space-y-6">

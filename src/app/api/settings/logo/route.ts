@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomUUID } from "crypto";
 
 export async function POST(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = await getDefaultUserId();
 
   try {
     const formData = await request.formData();
@@ -39,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const ext = file.name.split(".").pop()?.toLowerCase() || "png";
-    const filename = `logo-${session.user.id}-${randomUUID()}.${ext}`;
+    const filename = `logo-${userId}-${randomUUID()}.${ext}`;
     const relativePath = `/uploads/logos/${filename}`;
     const absolutePath = join(process.cwd(), "public", relativePath);
 
@@ -53,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Update user with new logo path
     await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: userId },
       data: { companyLogo: relativePath },
     });
 

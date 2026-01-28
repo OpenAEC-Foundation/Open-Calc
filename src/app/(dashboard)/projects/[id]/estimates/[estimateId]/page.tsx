@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -82,14 +82,10 @@ export default async function EstimateDetailPage({
 }: {
   params: Promise<{ id: string; estimateId: string }>;
 }) {
-  const session = await auth();
+  const userId = await getDefaultUserId();
   const { id: projectId, estimateId } = await params;
 
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  const estimate = await getEstimate(estimateId, projectId, session.user.id);
+  const estimate = await getEstimate(estimateId, projectId, userId);
 
   if (!estimate) {
     notFound();

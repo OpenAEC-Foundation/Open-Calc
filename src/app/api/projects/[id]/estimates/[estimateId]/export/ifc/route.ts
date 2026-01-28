@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { generateIFC, type EstimateData } from "@/lib/ifc";
 
@@ -8,11 +8,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; estimateId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id: projectId, estimateId } = await params;
 
     // Fetch estimate with all related data
@@ -20,7 +16,7 @@ export async function GET(
       where: {
         id: estimateId,
         projectId,
-        project: { userId: session.user.id },
+        project: { userId },
       },
       include: {
         project: {

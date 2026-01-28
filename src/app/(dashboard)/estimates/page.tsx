@@ -1,4 +1,4 @@
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,13 +49,8 @@ async function getEstimates(userId: string) {
 }
 
 export default async function EstimatesPage() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return null;
-  }
-
-  const estimates = await getEstimates(session.user.id);
+  const userId = await getDefaultUserId();
+  const estimates = await getEstimates(userId);
 
   return (
     <div className="space-y-6">

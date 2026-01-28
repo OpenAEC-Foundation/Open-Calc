@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function DELETE(
@@ -7,11 +7,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string; estimateId: string; chapterId: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id: projectId, estimateId, chapterId } = await params;
 
     // Verify chapter belongs to user's estimate
@@ -21,7 +17,7 @@ export async function DELETE(
         estimateId,
         estimate: {
           projectId,
-          project: { userId: session.user.id },
+          project: { userId },
         },
       },
     });

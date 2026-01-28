@@ -14,9 +14,6 @@ export default function HomePage() {
           <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">OpenCalc</span>
         </div>
         <div className="flex items-center gap-3">
-          <Button asChild variant="outline">
-            <Link href="/login">Inloggen</Link>
-          </Button>
           <Button asChild className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 shadow-lg shadow-blue-500/25">
             <Link href="/dashboard">Naar applicatie</Link>
           </Button>

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -21,15 +21,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id } = await params;
 
     const project = await prisma.project.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId },
       include: {
         client: true,
         estimates: {
@@ -57,16 +53,12 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id } = await params;
 
     // Check if project exists and belongs to user
     const existingProject = await prisma.project.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId },
     });
 
     if (!existingProject) {
@@ -113,16 +105,12 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id } = await params;
 
     // Check if project exists and belongs to user
     const existingProject = await prisma.project.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId },
     });
 
     if (!existingProject) {

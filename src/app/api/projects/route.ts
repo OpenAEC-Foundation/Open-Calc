@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -16,13 +16,10 @@ const projectSchema = z.object({
 
 export async function GET() {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = await getDefaultUserId();
 
     const projects = await prisma.project.findMany({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { updatedAt: "desc" },
       include: {
         client: { select: { name: true } },
@@ -42,10 +39,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const userId = await getDefaultUserId();
 
     const body = await request.json();
     const validated = projectSchema.safeParse(body);
@@ -61,7 +55,7 @@ export async function POST(request: Request) {
     const project = await prisma.project.create({
       data: {
         ...validated.data,
-        userId: session.user.id,
+        userId,
       },
     });
 

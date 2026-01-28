@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
@@ -17,16 +17,12 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id: projectId } = await params;
 
     // Verify project belongs to user
     const project = await prisma.project.findFirst({
-      where: { id: projectId, userId: session.user.id },
+      where: { id: projectId, userId },
     });
 
     if (!project) {
@@ -56,16 +52,12 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
+    const userId = await getDefaultUserId();
     const { id: projectId } = await params;
 
     // Verify project belongs to user
     const project = await prisma.project.findFirst({
-      where: { id: projectId, userId: session.user.id },
+      where: { id: projectId, userId },
     });
 
     if (!project) {

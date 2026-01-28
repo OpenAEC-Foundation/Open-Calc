@@ -447,11 +447,190 @@ async function main() {
     });
   }
 
+  // ============================================
+  // Create Example Project with Estimate
+  // ============================================
+
+  const DEFAULT_USER_ID = "default-user";
+
+  // Ensure default user exists
+  const defaultUser = await prisma.user.upsert({
+    where: { id: DEFAULT_USER_ID },
+    update: {},
+    create: {
+      id: DEFAULT_USER_ID,
+      email: "gebruiker@opencalc.nl",
+      name: "OpenCalc Gebruiker",
+    },
+  });
+
+  // Create example client
+  const exampleClient = await prisma.client.upsert({
+    where: { id: "example-client" },
+    update: {},
+    create: {
+      id: "example-client",
+      name: "Familie De Vries",
+      contactPerson: "Jan de Vries",
+      email: "devries@example.nl",
+      phone: "06-12345678",
+      address: "Voorbeeldstraat 123",
+      city: "Amsterdam",
+      postalCode: "1234 AB",
+    },
+  });
+
+  // Create example project
+  const exampleProject = await prisma.project.upsert({
+    where: { id: "example-project" },
+    update: {},
+    create: {
+      id: "example-project",
+      name: "Badkamer Renovatie Fam. De Vries",
+      projectNumber: "2024-001",
+      description: "Complete renovatie van de badkamer inclusief nieuw sanitair, tegelwerk en installaties.",
+      address: "Voorbeeldstraat 123",
+      city: "Amsterdam",
+      postalCode: "1234 AB",
+      status: "ACTIVE",
+      userId: DEFAULT_USER_ID,
+      clientId: exampleClient.id,
+    },
+  });
+
+  // Create example estimate
+  const exampleEstimate = await prisma.estimate.upsert({
+    where: { id: "example-estimate" },
+    update: {},
+    create: {
+      id: "example-estimate",
+      name: "Offerte Badkamer Renovatie",
+      description: "Complete renovatie badkamer 6m²",
+      version: 1,
+      status: "DRAFT",
+      generalCostsPercent: 8,
+      profitPercent: 10,
+      riskPercent: 3,
+      vatPercent: 21,
+      projectId: exampleProject.id,
+    },
+  });
+
+  // Create chapters for the estimate
+  const chapters = [
+    { id: "chapter-sloopwerk", code: "01", name: "Sloopwerk", sortOrder: 1 },
+    { id: "chapter-sanitair", code: "02", name: "Sanitair", sortOrder: 2 },
+    { id: "chapter-tegelwerk", code: "03", name: "Tegelwerk", sortOrder: 3 },
+    { id: "chapter-installatie", code: "04", name: "Loodgieterswerk", sortOrder: 4 },
+    { id: "chapter-elektra", code: "05", name: "Elektra", sortOrder: 5 },
+    { id: "chapter-afwerking", code: "06", name: "Afwerking", sortOrder: 6 },
+  ];
+
+  for (const chapter of chapters) {
+    await prisma.estimateChapter.upsert({
+      where: { id: chapter.id },
+      update: {},
+      create: {
+        ...chapter,
+        estimateId: exampleEstimate.id,
+      },
+    });
+  }
+
+  // Create estimate lines
+  const estimateLines = [
+    // Sloopwerk
+    { chapterId: "chapter-sloopwerk", code: "01.01", description: "Demonteren bestaand sanitair", quantity: 1, unit: "ps", laborHours: 4, laborRate: 45, laborCost: 180, materialCost: 0, unitPrice: 180, totalPrice: 180, sortOrder: 1 },
+    { chapterId: "chapter-sloopwerk", code: "01.02", description: "Verwijderen bestaande wandtegels", quantity: 18, unit: "m2", laborHours: 0.5, laborRate: 45, laborCost: 22.50, materialCost: 0, unitPrice: 22.50, totalPrice: 405, sortOrder: 2 },
+    { chapterId: "chapter-sloopwerk", code: "01.03", description: "Verwijderen bestaande vloertegels", quantity: 6, unit: "m2", laborHours: 0.6, laborRate: 45, laborCost: 27, materialCost: 0, unitPrice: 27, totalPrice: 162, sortOrder: 3 },
+    { chapterId: "chapter-sloopwerk", code: "01.04", description: "Afvoeren puin en afval", quantity: 1, unit: "ps", laborHours: 2, laborRate: 45, laborCost: 90, materialCost: 150, unitPrice: 240, totalPrice: 240, sortOrder: 4 },
+
+    // Sanitair
+    { chapterId: "chapter-sanitair", code: "02.01", description: "Toilet hangend compleet incl. inbouwreservoir", quantity: 1, unit: "st", laborHours: 4, laborRate: 45, laborCost: 180, materialCost: 650, unitPrice: 830, totalPrice: 830, sortOrder: 1 },
+    { chapterId: "chapter-sanitair", code: "02.02", description: "Wastafel met onderkast 80cm", quantity: 1, unit: "st", laborHours: 3, laborRate: 45, laborCost: 135, materialCost: 450, unitPrice: 585, totalPrice: 585, sortOrder: 2 },
+    { chapterId: "chapter-sanitair", code: "02.03", description: "Inloopdouche 90x120cm compleet met glazen wand", quantity: 1, unit: "st", laborHours: 8, laborRate: 45, laborCost: 360, materialCost: 1200, unitPrice: 1560, totalPrice: 1560, sortOrder: 3 },
+    { chapterId: "chapter-sanitair", code: "02.04", description: "Thermostatische douchekraan", quantity: 1, unit: "st", laborHours: 1.5, laborRate: 45, laborCost: 67.50, materialCost: 280, unitPrice: 347.50, totalPrice: 347.50, sortOrder: 4 },
+    { chapterId: "chapter-sanitair", code: "02.05", description: "Wastafelkraan", quantity: 1, unit: "st", laborHours: 1, laborRate: 45, laborCost: 45, materialCost: 150, unitPrice: 195, totalPrice: 195, sortOrder: 5 },
+    { chapterId: "chapter-sanitair", code: "02.06", description: "Designradiator 180x50cm", quantity: 1, unit: "st", laborHours: 2.5, laborRate: 45, laborCost: 112.50, materialCost: 380, unitPrice: 492.50, totalPrice: 492.50, sortOrder: 6 },
+
+    // Tegelwerk
+    { chapterId: "chapter-tegelwerk", code: "03.01", description: "Wandtegels 30x60cm incl. lijm en voegwerk", quantity: 18, unit: "m2", laborHours: 1.2, laborRate: 45, laborCost: 54, materialCost: 55, unitPrice: 109, totalPrice: 1962, sortOrder: 1 },
+    { chapterId: "chapter-tegelwerk", code: "03.02", description: "Vloertegels 60x60cm incl. lijm en voegwerk", quantity: 6, unit: "m2", laborHours: 1.0, laborRate: 45, laborCost: 45, materialCost: 65, unitPrice: 110, totalPrice: 660, sortOrder: 2 },
+    { chapterId: "chapter-tegelwerk", code: "03.03", description: "Kitwerk sanitair siliconen", quantity: 12, unit: "m", laborHours: 0.15, laborRate: 45, laborCost: 6.75, materialCost: 2, unitPrice: 8.75, totalPrice: 105, sortOrder: 3 },
+
+    // Loodgieterswerk
+    { chapterId: "chapter-installatie", code: "04.01", description: "Aanpassen waterleiding voor nieuwe indeling", quantity: 1, unit: "ps", laborHours: 6, laborRate: 50, laborCost: 300, materialCost: 180, unitPrice: 480, totalPrice: 480, sortOrder: 1 },
+    { chapterId: "chapter-installatie", code: "04.02", description: "Aanpassen riolering", quantity: 1, unit: "ps", laborHours: 5, laborRate: 50, laborCost: 250, materialCost: 120, unitPrice: 370, totalPrice: 370, sortOrder: 2 },
+    { chapterId: "chapter-installatie", code: "04.03", description: "Aansluiten radiator op CV", quantity: 1, unit: "st", laborHours: 2, laborRate: 50, laborCost: 100, materialCost: 45, unitPrice: 145, totalPrice: 145, sortOrder: 3 },
+
+    // Elektra
+    { chapterId: "chapter-elektra", code: "05.01", description: "Verplaatsen/aanpassen elektra groep badkamer", quantity: 1, unit: "ps", laborHours: 4, laborRate: 55, laborCost: 220, materialCost: 85, unitPrice: 305, totalPrice: 305, sortOrder: 1 },
+    { chapterId: "chapter-elektra", code: "05.02", description: "LED inbouwspots IP65", quantity: 4, unit: "st", laborHours: 0.5, laborRate: 55, laborCost: 27.50, materialCost: 35, unitPrice: 62.50, totalPrice: 250, sortOrder: 2 },
+    { chapterId: "chapter-elektra", code: "05.03", description: "Spiegelkast met verlichting 80cm", quantity: 1, unit: "st", laborHours: 1.5, laborRate: 55, laborCost: 82.50, materialCost: 350, unitPrice: 432.50, totalPrice: 432.50, sortOrder: 3 },
+    { chapterId: "chapter-elektra", code: "05.04", description: "Ventilator met naloop en vochtsensor", quantity: 1, unit: "st", laborHours: 2, laborRate: 55, laborCost: 110, materialCost: 180, unitPrice: 290, totalPrice: 290, sortOrder: 4 },
+
+    // Afwerking
+    { chapterId: "chapter-afwerking", code: "06.01", description: "Plafond stuken en schilderen", quantity: 6, unit: "m2", laborHours: 0.6, laborRate: 45, laborCost: 27, materialCost: 12, unitPrice: 39, totalPrice: 234, sortOrder: 1 },
+    { chapterId: "chapter-afwerking", code: "06.02", description: "Deurkozijn schilderen", quantity: 1, unit: "st", laborHours: 1.5, laborRate: 45, laborCost: 67.50, materialCost: 25, unitPrice: 92.50, totalPrice: 92.50, sortOrder: 2 },
+    { chapterId: "chapter-afwerking", code: "06.03", description: "Accessoires (toiletrolhouder, handdoekrek, etc.)", quantity: 1, unit: "ps", laborHours: 1, laborRate: 45, laborCost: 45, materialCost: 120, unitPrice: 165, totalPrice: 165, sortOrder: 3 },
+  ];
+
+  for (const line of estimateLines) {
+    const lineId = `line-${line.code.replace(/\./g, "-")}`;
+    await prisma.estimateLine.upsert({
+      where: { id: lineId },
+      update: {},
+      create: {
+        id: lineId,
+        ...line,
+        estimateId: exampleEstimate.id,
+      },
+    });
+  }
+
+  // Calculate and update estimate totals
+  const allLines = await prisma.estimateLine.findMany({
+    where: { estimateId: exampleEstimate.id },
+  });
+
+  const totalLabor = allLines.reduce((sum, line) => sum + line.laborCost * line.quantity, 0);
+  const totalMaterial = allLines.reduce((sum, line) => sum + line.materialCost * line.quantity, 0);
+  const totalEquipment = allLines.reduce((sum, line) => sum + line.equipmentCost * line.quantity, 0);
+  const totalSubcontr = allLines.reduce((sum, line) => sum + line.subcontrCost * line.quantity, 0);
+  const subtotal = totalLabor + totalMaterial + totalEquipment + totalSubcontr;
+
+  const generalCostsAmount = subtotal * (8 / 100);
+  const profitAmount = (subtotal + generalCostsAmount) * (10 / 100);
+  const riskAmount = (subtotal + generalCostsAmount + profitAmount) * (3 / 100);
+  const totalExclVat = subtotal + generalCostsAmount + profitAmount + riskAmount;
+  const vatAmount = totalExclVat * (21 / 100);
+  const totalInclVat = totalExclVat + vatAmount;
+
+  await prisma.estimate.update({
+    where: { id: exampleEstimate.id },
+    data: {
+      totalLabor,
+      totalMaterial,
+      totalEquipment,
+      totalSubcontr,
+      subtotal,
+      generalCostsAmount,
+      profitAmount,
+      riskAmount,
+      totalExclVat,
+      vatAmount,
+      totalInclVat,
+    },
+  });
+
   console.log("Seeding completed!");
   console.log(`Created/updated ${units.length} units`);
   console.log(`Created NL-SfB library with ${nlsfbItems.length} items`);
   console.log(`Created STABU library with ${stabuItems.length} items`);
   console.log(`Created RAW library with ${rawItems.length} items`);
+  console.log(`Created example project: ${exampleProject.name}`);
+  console.log(`Created example estimate with ${estimateLines.length} lines`);
+  console.log(`Estimate total incl. BTW: €${totalInclVat.toFixed(2)}`);
 }
 
 main()

@@ -1,16 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { itemId } = await params;
 
   const item = await prisma.libraryItem.findUnique({
@@ -48,15 +42,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { itemId } = await params;
   const body = await request.json();
 
-  // Find the item and verify ownership
+  // Find the item
   const item = await prisma.libraryItem.findUnique({
     where: { id: itemId },
     include: {
@@ -66,11 +55,6 @@ export async function PATCH(
 
   if (!item) {
     return NextResponse.json({ error: "Item not found" }, { status: 404 });
-  }
-
-  // Check if user owns the library
-  if (item.library.userId && item.library.userId !== session.user.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Update allowed fields

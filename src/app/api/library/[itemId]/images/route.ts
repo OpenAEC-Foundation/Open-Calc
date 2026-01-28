@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
@@ -9,11 +8,6 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { itemId } = await params;
 
   const images = await prisma.libraryItemImage.findMany({
@@ -28,14 +22,9 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ itemId: string }> }
 ) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const { itemId } = await params;
 
-  // Verify the library item exists and user has access
+  // Verify the library item exists
   const libraryItem = await prisma.libraryItem.findUnique({
     where: { id: itemId },
     include: {
@@ -45,11 +34,6 @@ export async function POST(
 
   if (!libraryItem) {
     return NextResponse.json({ error: "Library item not found" }, { status: 404 });
-  }
-
-  // Check if user owns the library or it's a public library
-  if (libraryItem.library.userId && libraryItem.library.userId !== session.user.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   try {

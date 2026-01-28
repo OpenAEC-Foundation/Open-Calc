@@ -4,6 +4,33 @@ import Credentials from "next-auth/providers/credentials";
 import { prisma } from "@/lib/db";
 import { z } from "zod";
 
+// Default user ID for public access (authentication disabled)
+const DEFAULT_USER_ID = "default-user";
+const DEFAULT_USER_EMAIL = "gebruiker@opencalc.nl";
+const DEFAULT_USER_NAME = "OpenCalc Gebruiker";
+
+// Get or create the default user for public access
+export async function getDefaultUserId(): Promise<string> {
+  const existingUser = await prisma.user.findUnique({
+    where: { id: DEFAULT_USER_ID },
+  });
+
+  if (existingUser) {
+    return existingUser.id;
+  }
+
+  // Create default user if it doesn't exist
+  const newUser = await prisma.user.create({
+    data: {
+      id: DEFAULT_USER_ID,
+      email: DEFAULT_USER_EMAIL,
+      name: DEFAULT_USER_NAME,
+    },
+  });
+
+  return newUser.id;
+}
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),

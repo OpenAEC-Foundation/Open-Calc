@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = await getDefaultUserId();
 
   const user = await prisma.user.findUnique({
-    where: { id: session.user.id },
+    where: { id: userId },
     select: {
       name: true,
       companyName: true,
@@ -35,10 +32,7 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = await getDefaultUserId();
 
   const body = await request.json();
 
@@ -70,7 +64,7 @@ export async function PATCH(request: NextRequest) {
   }
 
   const user = await prisma.user.update({
-    where: { id: session.user.id },
+    where: { id: userId },
     data: updateData,
   });
 
