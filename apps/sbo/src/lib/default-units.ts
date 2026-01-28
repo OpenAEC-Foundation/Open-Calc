@@ -1,0 +1,17 @@
+export const DEFAULT_UNITS = [
+  { code: "st", name: "stuks", symbol: "st" },
+  { code: "m", name: "meter", symbol: "m" },
+  { code: "m2", name: "vierkante meter", symbol: "m\u00b2" },
+  { code: "m3", name: "kubieke meter", symbol: "m\u00b3" },
+  { code: "kg", name: "kilogram", symbol: "kg" },
+  { code: "ton", name: "ton", symbol: "t" },
+  { code: "uur", name: "uur", symbol: "u" },
+  { code: "dag", name: "dag", symbol: "dg" },
+  { code: "week", name: "week", symbol: "wk" },
+  { code: "ps", name: "post", symbol: "ps" },
+  { code: "ls", name: "lump sum", symbol: "ls" },
+  { code: "km", name: "kilometer", symbol: "km" },
+  { code: "l", name: "liter", symbol: "l" },
+  { code: "kWh", name: "kilowattuur", symbol: "kWh" },
+  { code: "stuk", name: "stuks", symbol: "st" },
+];

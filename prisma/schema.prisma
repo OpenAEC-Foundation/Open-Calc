@@ -52,6 +52,7 @@ model User {
   sessions      Session[]
   projects      Project[]
   libraries     CostLibrary[]
+  timeEntries   TimeEntry[]
 
   @@map("users")
 }
@@ -109,12 +110,19 @@ model Client {
   city          String?
   postalCode    String?
   notes         String?
+  type          String    @default("CUSTOMER") // CUSTOMER, SUPPLIER, SUBCONTRACTOR, PARTNER
+  website       String?
+  vatNumber     String?
+  kvkNumber     String?
+  paymentTermDays Int     @default(30)
 
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  projects      Project[]
+  projects        Project[]
+  purchaseOrders  PurchaseOrder[]
+  invoices        Invoice[]
 
   @@map("clients")
 }
@@ -144,7 +152,14 @@ model Project {
   clientId      String?
   client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
 
-  estimates     Estimate[]
+  estimates       Estimate[]
+  timeEntries     TimeEntry[]
+  milestones      Milestone[]
+  documents       Document[]
+  purchaseOrders  PurchaseOrder[]
+  invoices        Invoice[]
+  actualCosts     ActualCost[]
+  changeOrders    ChangeOrder[]
 
   @@map("projects")
 }
@@ -185,6 +200,17 @@ model Estimate {
   validUntil      DateTime?
 
   notes           String?
+
+  // Offer/Quote specific fields
+  offerWorkDescription  String?   // Werkbeschrijving
+  offerMaterials        String?   // Materialen omschrijving
+  offerEquipment        String?   // Uitrusting/gereedschap
+  offerExclusions       String?   // Uitsluitingen
+  offerExtraWorkRate    Float?    // Uurtarief meerwerk
+  offerExtraWorkTerms   String?   // Meerwerk voorwaarden
+  offerPaymentTerms     String?   // Betalingsvoorwaarden
+  offerValidityWeeks    Int       @default(4) // Geldigheid in weken
+  offerPlanningNotes    String?   // Planning notities
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -251,6 +277,9 @@ model EstimateLine {
   totalPrice    Float     @default(0)     // unitPrice * quantity
 
   notes         String?
+
+  // Line type for CUF-XML export
+  lineType      String    @default("NORMAL") // NORMAL, PROVISIONAL, ADJUSTABLE
 
   // Source tracking
   libraryItemId String?
@@ -378,6 +407,32 @@ model LibraryItemImage {
   @@map("library_item_images")
 }
 
+
+// ============================================
+// TIME TRACKING (URENREGISTRATIE)
+// ============================================
+
+model TimeEntry {
+  id            String    @id @default(cuid())
+  date          DateTime
+  hours         Float
+  description   String
+  costCategory  String
+  hourlyRate    Float
+  totalCost     Float     // Berekend: hours * hourlyRate
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("time_entries")
+}
 // ============================================
 // SETTINGS & CONFIGURATION
 // ============================================
@@ -389,4 +444,175 @@ model Unit {
   symbol        String    // st, m, m², m³, kg, u
 
   @@map("units")
+}
+
+// ============================================
+// MILESTONES & PLANNING
+// ============================================
+
+model Milestone {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  dueDate       DateTime
+  startDate     DateTime?
+  completedAt   DateTime?
+  durationDays  Int       @default(1)
+  color         String?
+  sortOrder     Int       @default(0)
+  status        String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, DELAYED
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  dependsOnId   String?
+  dependsOn     Milestone?  @relation("MilestoneDependency", fields: [dependsOnId], references: [id])
+  dependents    Milestone[] @relation("MilestoneDependency")
+
+  @@map("milestones")
+}
+
+// ============================================
+// DOCUMENTS
+// ============================================
+
+model Document {
+  id            String    @id @default(cuid())
+  name          String
+  type          String    // pdf, dwg, jpg, etc.
+  category      String    // Tekeningen, Bestekken, Offertes, etc.
+  filePath      String?
+  fileSize      Int?
+  version       Int       @default(1)
+  uploadedAt    DateTime  @default(now())
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("documents")
+}
+
+// ============================================
+// PURCHASE ORDERS
+// ============================================
+
+model PurchaseOrder {
+  id                    String    @id @default(cuid())
+  orderNumber           String
+  status                String    @default("DRAFT") // DRAFT, SENT, CONFIRMED, DELIVERED, CANCELLED
+  totalAmount           Float     @default(0)
+  orderDate             DateTime  @default(now())
+  expectedDelivery      DateTime?
+  deliveredAt           DateTime?
+  notes                 String?
+
+  projectId             String
+  project               Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  supplierId            String?
+  supplier              Client?   @relation(fields: [supplierId], references: [id])
+
+  lines                 PurchaseOrderLine[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id                String    @id @default(cuid())
+  description       String
+  quantity          Float     @default(0)
+  unit              String    @default("st")
+  unitPrice         Float     @default(0)
+  totalPrice        Float     @default(0)
+
+  purchaseOrderId   String
+  purchaseOrder     PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_order_lines")
+}
+
+// ============================================
+// INVOICES
+// ============================================
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String
+  status        String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime
+  subtotal      Float     @default(0)
+  vatPercent    Float     @default(21)
+  vatAmount     Float     @default(0)
+  total         Float     @default(0)
+  paidAt        DateTime?
+  description   String?
+  notes         String?
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id])
+
+  @@map("invoices")
+}
+
+// ============================================
+// ACTUAL COSTS (NACALCULATIE)
+// ============================================
+
+model ActualCost {
+  id            String    @id @default(cuid())
+  category      String    // Arbeid, Materiaal, Onderaanneming, etc.
+  description   String
+  budgetAmount  Float     @default(0)
+  actualAmount  Float     @default(0)
+  variance      Float     @default(0)
+  date          DateTime  @default(now())
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("actual_costs")
+}
+
+// ============================================
+// CHANGE ORDERS (MEER/MINDERWERK)
+// ============================================
+
+model ChangeOrder {
+  id            String    @id @default(cuid())
+  number        Int
+  title         String
+  description   String?
+  type          String    @default("EXTRA") // EXTRA, LESS
+  status        String    @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
+  totalAmount   Float     @default(0)
+  createdAt     DateTime  @default(now())
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  estimateId    String?
+
+  lines         ChangeOrderLine[]
+
+  @@map("change_orders")
+}
+
+model ChangeOrderLine {
+  id              String    @id @default(cuid())
+  description     String
+  quantity        Float     @default(0)
+  unit            String    @default("st")
+  unitPrice       Float     @default(0)
+  totalPrice      Float     @default(0)
+
+  changeOrderId   String
+  changeOrder     ChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+
+  estimateLineId  String?
+
+  @@map("change_order_lines")
 }

@@ -1,0 +1,728 @@
+// OpenCalc Database Schema
+// Begrotingsprogramma voor de bouwsector
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String?   // Hashed password for credentials auth
+  emailVerified DateTime?
+  image         String?
+
+  // Company info
+  companyName   String?
+  companyAddress String?
+  companyCity   String?
+  companyPostalCode String?
+  companyPhone  String?
+  companyEmail  String?
+  companyWebsite String?
+  companyLogo   String?   // Path to logo image
+  kvkNumber     String?   // KvK nummer
+  btwNumber     String?   // BTW nummer
+  ibanNumber    String?   // IBAN bankrekening
+
+  // Settings
+  defaultMarkup     Float   @default(10)  // Default opslag %
+  defaultLaborRate  Float   @default(45)  // Default uurloon
+
+  // ERPNext Integration
+  erpnextUrl        String?   // ERPNext instance URL
+  erpnextApiKey     String?   // ERPNext API Key
+  erpnextApiSecret  String?   // ERPNext API Secret
+
+  // Role (punt 15: Multi-user)
+  role              String    @default("ADMIN") // ADMIN, CALCULATOR, PROJECT_MANAGER, VIEWER
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  accounts      Account[]
+  sessions      Session[]
+  projects      Project[]
+  libraries     CostLibrary[]
+  timeEntries   TimeEntry[]
+  documents     Document[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ============================================
+// PROJECTS & CLIENTS (punt 20: CRM)
+// ============================================
+
+model Client {
+  id            String    @id @default(cuid())
+  name          String
+  contactPerson String?
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  postalCode    String?
+  notes         String?
+
+  // CRM fields (punt 20)
+  type          String    @default("CUSTOMER") // CUSTOMER, SUPPLIER, SUBCONTRACTOR
+  website       String?
+  vatNumber     String?
+  kvkNumber     String?
+  paymentTermDays Int     @default(30)
+  tags          String?   // Comma-separated tags
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projects      Project[]
+  purchaseOrders PurchaseOrder[]
+  invoices      Invoice[]
+
+  @@map("clients")
+}
+
+model Project {
+  id            String    @id @default(cuid())
+  projectNumber String?   // User-defined project number
+  name          String
+  description   String?
+  address       String?
+  city          String?
+  postalCode    String?
+
+  status        String    @default("DRAFT") // DRAFT, ACTIVE, COMPLETED, CANCELLED
+
+  // Dates
+  startDate     DateTime?
+  endDate       DateTime?
+
+  // Budget (punt 9: nacalculatie)
+  budgetLabor     Float   @default(0)
+  budgetMaterial  Float   @default(0)
+  budgetEquipment Float   @default(0)
+  budgetSubcontr  Float   @default(0)
+  budgetTotal     Float   @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  estimates     Estimate[]
+  milestones    Milestone[]
+  timeEntries   TimeEntry[]
+  changeOrders  ChangeOrder[]
+  documents     Document[]
+  purchaseOrders PurchaseOrder[]
+  invoices      Invoice[]
+  actualCosts   ActualCost[]
+
+  @@map("projects")
+}
+
+// ============================================
+// ESTIMATES (BEGROTINGEN)
+// ============================================
+
+model Estimate {
+  id            String    @id @default(cuid())
+  name          String
+  version       Int       @default(1)
+  description   String?
+
+  status        String    @default("DRAFT") // DRAFT, SENT, ACCEPTED, REJECTED, EXPIRED
+
+  // Source tracking (punt 1: kopieer begroting)
+  sourceEstimateId String?   // ID of the estimate this was copied from
+
+  // Totals (calculated)
+  totalLabor      Float   @default(0)
+  totalMaterial   Float   @default(0)
+  totalEquipment  Float   @default(0)
+  totalSubcontr   Float   @default(0)
+  subtotal        Float   @default(0)
+
+  // Markups
+  generalCostsPercent Float @default(0)   // Algemene kosten %
+  generalCostsAmount  Float @default(0)
+  profitPercent       Float @default(0)   // Winst %
+  profitAmount        Float @default(0)
+  riskPercent         Float @default(0)   // Risico %
+  riskAmount          Float @default(0)
+
+  totalExclVat    Float   @default(0)
+  vatPercent      Float   @default(21)
+  vatAmount       Float   @default(0)
+  totalInclVat    Float   @default(0)
+
+  // Validity
+  validUntil      DateTime?
+
+  notes           String?
+
+  // Offertespecificatie teksten
+  offerWorkDescription    String?   // Beschrijving uit te voeren werkzaamheden
+  offerMaterials          String?   // Toe te passen materialen
+  offerEquipment          String?   // Toe te passen materieel
+  offerExclusions         String?   // Wat de offerte NIET bevat
+  offerExtraWorkRate      Float?    // Meerwerk uurtarief
+  offerExtraWorkTerms     String?   // Meerwerk voorwaarden
+  offerPaymentTerms       String?   // Betalingsvoorwaarden
+  offerValidityWeeks      Int       @default(4)  // Geldigheid in weken
+  offerPlanningNotes      String?   // Planningsnotities
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  chapters        EstimateChapter[]
+  lines           EstimateLine[]
+  changeOrders    ChangeOrder[]
+  revisions       EstimateRevision[]
+
+  @@map("estimates")
+}
+
+// Punt 14: Revisie-historie
+model EstimateRevision {
+  id            String    @id @default(cuid())
+  revisionNumber Int
+  snapshot      String    // JSON snapshot of the full estimate at this point
+  reason        String?   // Why the revision was created
+  createdBy     String?   // User who created the revision
+
+  createdAt     DateTime  @default(now())
+
+  estimateId    String
+  estimate      Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  @@map("estimate_revisions")
+}
+
+model EstimateChapter {
+  id            String    @id @default(cuid())
+  code          String    // NL-SfB or STABU code
+  name          String
+  sortOrder     Int       @default(0)
+
+  // Punt 7: Codering
+  codingStandard String?   // NL_SFB, STABU, RAW
+
+  // Punt 5: Opslagpercentages per hoofdstuk
+  markupPercent   Float   @default(0)   // Opslag % voor dit hoofdstuk
+  markupAmount    Float   @default(0)
+
+  // Subtotals (calculated)
+  totalLabor      Float   @default(0)
+  totalMaterial   Float   @default(0)
+  totalEquipment  Float   @default(0)
+  totalSubcontr   Float   @default(0)
+  subtotal        Float   @default(0)
+
+  // Relations
+  estimateId    String
+  estimate      Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  parentId      String?
+  parent        EstimateChapter?  @relation("ChapterHierarchy", fields: [parentId], references: [id])
+  children      EstimateChapter[] @relation("ChapterHierarchy")
+
+  lines         EstimateLine[]
+
+  @@map("estimate_chapters")
+}
+
+model EstimateLine {
+  id            String    @id @default(cuid())
+  sortOrder     Int       @default(0)
+
+  // From library or manual
+  code          String?
+  description   String
+  specification String?   // Detailed specification
+
+  // Quantities
+  quantity      Float     @default(0)
+  unit          String    @default("st")  // st, m, m2, m3, kg, uur, etc.
+
+  // Punt 3: Stelposten & verrekenbaar
+  lineType      String    @default("NORMAL") // NORMAL, PROVISIONAL, ADJUSTABLE
+  // NORMAL = reguliere kostenpost
+  // PROVISIONAL = stelpost (vaste schatting, wordt later vastgesteld)
+  // ADJUSTABLE = verrekenbaar (wordt op basis van werkelijk verrekend)
+
+  // Costs
+  laborHours    Float     @default(0)
+  laborRate     Float     @default(45)
+  laborCost     Float     @default(0)     // Calculated: hours * rate
+
+  materialCost  Float     @default(0)
+  equipmentCost Float     @default(0)
+  subcontrCost  Float     @default(0)     // Onderaanneming
+
+  unitPrice     Float     @default(0)     // Total per unit
+  totalPrice    Float     @default(0)     // unitPrice * quantity
+
+  notes         String?
+
+  // Source tracking
+  libraryItemId String?
+  libraryItem   LibraryItem? @relation(fields: [libraryItemId], references: [id], onDelete: SetNull)
+
+  // Relations
+  estimateId    String
+  estimate      Estimate  @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  chapterId     String?
+  chapter       EstimateChapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  changeOrderLines ChangeOrderLine[]
+
+  @@map("estimate_lines")
+}
+
+// ============================================
+// COST LIBRARY (KOSTENBIBLIOTHEEK)
+// ============================================
+
+model CostLibrary {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  version       String?
+
+  standard      String    @default("CUSTOM") // NL_SFB, STABU, RAW, CUSTOM
+
+  // Punt 8: Meerdere kostenbestanden
+  sourceType    String    @default("CUSTOM") // CUSTOM, BRINK, HIBIN, IMPORT
+  sourceFile    String?   // Original import file path
+
+  isPublic      Boolean   @default(false)  // Shared library
+  isDefault     Boolean   @default(false)  // Default library for new users
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String?   // null for system libraries
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  items         LibraryItem[]
+  categories    LibraryCategory[]
+
+  @@map("cost_libraries")
+}
+
+model LibraryCategory {
+  id            String    @id @default(cuid())
+  code          String    // e.g., "21" for NL-SfB Buitenwanden
+  name          String    // e.g., "Buitenwanden"
+  description   String?
+  sortOrder     Int       @default(0)
+
+  // Relations
+  libraryId     String
+  library       CostLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  parentId      String?
+  parent        LibraryCategory?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children      LibraryCategory[] @relation("CategoryHierarchy")
+
+  items         LibraryItem[]
+
+  @@unique([libraryId, code])
+  @@map("library_categories")
+}
+
+model LibraryItem {
+  id            String    @id @default(cuid())
+  code          String    // Full code like "21.11.01" or "22.01.01.01"
+  description   String
+  specification String?   // Detailed specification text (plain text)
+  offerText     String?   // Rich text for quotes/offers (HTML)
+
+  unit          String    @default("st")
+
+  // Cost breakdown
+  laborHours    Float     @default(0)
+  laborRate     Float     @default(45)
+  materialCost  Float     @default(0)
+  equipmentCost Float     @default(0)
+  subcontrCost  Float     @default(0)
+
+  // Calculated unit price
+  unitPrice     Float     @default(0)
+
+  // Metadata
+  notes         String?
+  isActive      Boolean   @default(true)
+
+  // Price history tracking
+  lastPriceUpdate DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  libraryId     String
+  library       CostLibrary @relation(fields: [libraryId], references: [id], onDelete: Cascade)
+
+  categoryId    String?
+  category      LibraryCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  estimateLines EstimateLine[]
+  images        LibraryItemImage[]
+
+  @@unique([libraryId, code])
+  @@map("library_items")
+}
+
+model LibraryItemImage {
+  id            String    @id @default(cuid())
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String    // Storage path
+  url           String?   // Public URL if applicable
+  alt           String?   // Alt text for accessibility
+  caption       String?
+
+  createdAt     DateTime  @default(now())
+
+  // Relations
+  libraryItemId String
+  libraryItem   LibraryItem @relation(fields: [libraryItemId], references: [id], onDelete: Cascade)
+
+  @@map("library_item_images")
+}
+
+// ============================================
+// SETTINGS & CONFIGURATION
+// ============================================
+
+// Punt 4: Eenheden bibliotheek
+model Unit {
+  id            String    @id @default(cuid())
+  code          String    @unique // st, m, m2, m3, kg, uur, etc.
+  name          String    // stuks, meter, vierkante meter, etc.
+  symbol        String    // st, m, m², m³, kg, u
+
+  @@map("units")
+}
+
+// ============================================
+// PUNT 13: MEER/MINDERWERK
+// ============================================
+
+model ChangeOrder {
+  id            String    @id @default(cuid())
+  number        Int       // Sequential number per project
+  title         String
+  description   String?
+  status        String    @default("DRAFT") // DRAFT, SUBMITTED, APPROVED, REJECTED
+  type          String    @default("EXTRA") // EXTRA (meerwerk), LESS (minderwerk)
+
+  // Totals
+  totalAmount   Float     @default(0)
+
+  // Approval
+  approvedBy    String?
+  approvedAt    DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  estimateId    String?
+  estimate      Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+
+  lines         ChangeOrderLine[]
+
+  @@map("change_orders")
+}
+
+model ChangeOrderLine {
+  id            String    @id @default(cuid())
+  description   String
+  quantity      Float     @default(0)
+  unit          String    @default("st")
+  unitPrice     Float     @default(0)
+  totalPrice    Float     @default(0)
+
+  // Optional reference to original estimate line
+  estimateLineId String?
+  estimateLine   EstimateLine? @relation(fields: [estimateLineId], references: [id], onDelete: SetNull)
+
+  changeOrderId String
+  changeOrder   ChangeOrder @relation(fields: [changeOrderId], references: [id], onDelete: Cascade)
+
+  @@map("change_order_lines")
+}
+
+// ============================================
+// PUNT 16: PROJECTPLANNING
+// ============================================
+
+model Milestone {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  dueDate       DateTime?
+  completedAt   DateTime?
+  status        String    @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, DELAYED
+  sortOrder     Int       @default(0)
+  color         String?   // Hex color for Gantt chart
+
+  // Dependencies
+  dependsOnId   String?
+  dependsOn     Milestone? @relation("MilestoneDependency", fields: [dependsOnId], references: [id])
+  dependents    Milestone[] @relation("MilestoneDependency")
+
+  // Duration
+  durationDays  Int       @default(0)
+  startDate     DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("milestones")
+}
+
+// ============================================
+// PUNT 17: URENREGISTRATIE
+// ============================================
+
+model TimeEntry {
+  id            String    @id @default(cuid())
+  date          DateTime
+  hours         Float
+  description   String?
+  costCategory  String    @default("LABOR") // LABOR, EQUIPMENT, TRAVEL
+
+  // Rate at time of entry
+  hourlyRate    Float     @default(45)
+  totalCost     Float     @default(0)
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("time_entries")
+}
+
+// ============================================
+// PUNT 9/18: NACALCULATIE (Actual Costs)
+// ============================================
+
+model ActualCost {
+  id            String    @id @default(cuid())
+  date          DateTime
+  description   String
+  category      String    // LABOR, MATERIAL, EQUIPMENT, SUBCONTRACTOR
+  amount        Float
+  quantity      Float     @default(1)
+  unitPrice     Float     @default(0)
+  unit          String    @default("st")
+  reference     String?   // Invoice/receipt reference
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("actual_costs")
+}
+
+// ============================================
+// PUNT 19: FACTURATIE
+// ============================================
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String
+  type          String    @default("INSTALLMENT") // INSTALLMENT (termijnstaat), FINAL, CHANGE_ORDER
+  status        String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+
+  // Amounts
+  subtotal      Float     @default(0)
+  vatPercent    Float     @default(21)
+  vatAmount     Float     @default(0)
+  totalAmount   Float     @default(0)
+
+  // Dates
+  issueDate     DateTime  @default(now())
+  dueDate       DateTime?
+  paidDate      DateTime?
+
+  // Content
+  description   String?
+  notes         String?
+
+  // Installment tracking
+  installmentNumber Int?  // Which installment (1, 2, 3, ...)
+  installmentPercent Float? // % of total
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  clientId      String?
+  client        Client?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@map("invoices")
+}
+
+// ============================================
+// PUNT 21: DOCUMENTBEHEER
+// ============================================
+
+model Document {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  type          String    @default("OTHER") // DRAWING, CONTRACT, SPECIFICATION, PHOTO, OTHER
+  filename      String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  uploadedById  String?
+  uploadedBy    User?     @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+// ============================================
+// PUNT 22: INKOOPBEHEER
+// ============================================
+
+model PurchaseOrder {
+  id            String    @id @default(cuid())
+  orderNumber   String
+  status        String    @default("DRAFT") // DRAFT, SENT, CONFIRMED, DELIVERED, CANCELLED
+  description   String?
+
+  // Amounts
+  totalAmount   Float     @default(0)
+
+  // Dates
+  orderDate     DateTime  @default(now())
+  expectedDelivery DateTime?
+  deliveredDate DateTime?
+
+  notes         String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  projectId     String
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  supplierId    String?
+  supplier      Client?   @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+
+  lines         PurchaseOrderLine[]
+
+  @@map("purchase_orders")
+}
+
+model PurchaseOrderLine {
+  id            String    @id @default(cuid())
+  description   String
+  quantity      Float     @default(0)
+  unit          String    @default("st")
+  unitPrice     Float     @default(0)
+  totalPrice    Float     @default(0)
+
+  purchaseOrderId String
+  purchaseOrder   PurchaseOrder @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+
+  @@map("purchase_order_lines")
+}

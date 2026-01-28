@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run db:generate:*)",
+      "Bash(npx prisma generate:*)",
+      "Bash(powershell -Command \"Start-Sleep -Seconds 3; Set-Location ''C:\\\\Users\\\\MartijnvanderKolk\\\\Documents\\\\GitHub\\\\Open-Calc\\\\packages\\\\database''; npx prisma generate\")",
+      "Bash(dir \"C:\\\\Users\\\\MartijnvanderKolk\\\\Documents\\\\GitHub\\\\Open-Calc\" /b)",
+      "Bash(powershell -Command:*)",
+      "Bash(npm run dev:sbo:*)",
+      "Bash(xcopy:*)",
+      "Bash(taskkill:*)",
+      "Bash(Get-Process -Name \"node\" -ErrorAction SilentlyContinue)",
+      "Bash(Stop-Process -Force)",
+      "Bash(Write-Host \"Node processes stopped\")",
+      "Bash(ls:*)",
+      "Bash(npx prisma db seed:*)",
+      "Bash(dir:*)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx tsx:*)",
+      "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx tsx:*)",
+      "Bash(sqlite3:*)",
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prisma:*)",
+      "Bash(DATABASE_URL=\"file:../../prisma/dev.db\" npx prisma db push:*)",
+      "Bash(npx tsx:*)",
+      "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx prisma db push:*)",
+      "WebFetch(domain:wpcalc.nl)",
+      "WebFetch(domain:www.ibis.nl)",
+      "WebFetch(domain:www.afas.nl)",
+      "Bash(find:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout:*)",
+      "Bash(ping:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
+    ]
+  }
+}
