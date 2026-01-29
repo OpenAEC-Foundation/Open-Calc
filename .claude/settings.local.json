@@ -37,7 +37,9 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(npx next dev:*)",
-      "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx prisma db seed:*)"
+      "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx prisma db seed:*)",
+      "mcp__filesystem__directory_tree",
+      "Bash(tasklist:*)"
     ]
   }
 }
