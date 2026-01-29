@@ -14,28 +14,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Settings, Loader2 } from "lucide-react";
+import { Percent, Loader2 } from "lucide-react";
 
 interface EstimateSettingsProps {
   estimateId: string;
   projectId: string;
   initialData: {
-    name: string;
-    description: string | null;
-    status: string;
     generalCostsPercent: number;
     profitPercent: number;
     riskPercent: number;
     vatPercent: number;
-    validUntil: string | null;
     notes: string | null;
   };
 }
@@ -50,9 +39,6 @@ export function EstimateSettings({
   const [loading, setLoading] = useState(false);
 
   // Form state
-  const [name, setName] = useState(initialData.name);
-  const [description, setDescription] = useState(initialData.description || "");
-  const [status, setStatus] = useState(initialData.status);
   const [generalCostsPercent, setGeneralCostsPercent] = useState(
     initialData.generalCostsPercent.toString()
   );
@@ -76,9 +62,6 @@ export function EstimateSettings({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name,
-            description: description || null,
-            status,
             generalCostsPercent: parseFloat(generalCostsPercent) || 0,
             profitPercent: parseFloat(profitPercent) || 0,
             riskPercent: parseFloat(riskPercent) || 0,
@@ -101,51 +84,24 @@ export function EstimateSettings({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">
-          <Settings className="mr-2 h-4 w-4" />
-          Instellingen
+          <Percent className="mr-2 h-4 w-4" />
+          BTW en opslagen
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Begroting instellingen
+            <Percent className="h-5 w-5" />
+            BTW en opslagen
           </DialogTitle>
           <DialogDescription>
-            Pas de opslagen, BTW en andere instellingen aan
+            Pas de opslagen en BTW percentages aan
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Naam</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-
-          {/* Status */}
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={setStatus}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="DRAFT">Concept</SelectItem>
-                <SelectItem value="SENT">Verzonden</SelectItem>
-                <SelectItem value="ACCEPTED">Geaccepteerd</SelectItem>
-                <SelectItem value="REJECTED">Afgewezen</SelectItem>
-                <SelectItem value="EXPIRED">Verlopen</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Markups section */}
-          <div className="space-y-3 pt-2">
+          <div className="space-y-3">
             <h4 className="text-sm font-medium">Opslagen</h4>
 
             <div className="grid grid-cols-3 gap-3">
@@ -251,7 +207,7 @@ export function EstimateSettings({
           <Button variant="outline" onClick={() => setOpen(false)}>
             Annuleren
           </Button>
-          <Button onClick={handleSave} disabled={loading || !name}>
+          <Button onClick={handleSave} disabled={loading}>
             {loading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (

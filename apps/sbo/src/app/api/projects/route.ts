@@ -14,9 +14,11 @@ const projectSchema = z.object({
   clientId: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const userId = await getDefaultUserId();
+    const { searchParams } = new URL(request.url);
+    const includeEstimates = searchParams.get("include") === "estimates";
 
     const projects = await prisma.project.findMany({
       where: { userId },
@@ -24,6 +26,16 @@ export async function GET() {
       include: {
         client: { select: { name: true } },
         _count: { select: { estimates: true } },
+        ...(includeEstimates && {
+          estimates: {
+            select: {
+              id: true,
+              name: true,
+              totalInclVat: true,
+              totalExclVat: true,
+            },
+          },
+        }),
       },
     });
 

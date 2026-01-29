@@ -35,7 +35,9 @@
       "Bash(timeout:*)",
       "Bash(ping:*)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(npx next dev:*)",
+      "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx prisma db seed:*)"
     ]
   }
 }

@@ -12,13 +12,6 @@ import {
   Layers,
   Check,
   Clock,
-  Receipt,
-  FileBox,
-  ShoppingCart,
-  Users,
-  BarChart3,
-  CalendarDays,
-  GitCompare,
 } from "lucide-react";
 import {
   Sidebar,
@@ -96,48 +89,9 @@ const menuItems = [
   },
 ];
 
-const projectManagementItems = [
-  {
-    title: "Urenregistratie",
-    url: "/time-tracking",
-    icon: Clock,
-  },
-  {
-    title: "Facturatie",
-    url: "/invoices",
-    icon: Receipt,
-  },
-  {
-    title: "Documenten",
-    url: "/documents",
-    icon: FileBox,
-  },
-  {
-    title: "Inkoop",
-    url: "/purchase-orders",
-    icon: ShoppingCart,
-  },
-  {
-    title: "Relaties",
-    url: "/contacts",
-    icon: Users,
-  },
-  {
-    title: "Planning",
-    url: "/planning",
-    icon: CalendarDays,
-  },
-  {
-    title: "Nacalculatie",
-    url: "/nacalculatie",
-    icon: GitCompare,
-  },
-  {
-    title: "Rapportages",
-    url: "/reports",
-    icon: BarChart3,
-  },
-];
+// SBO Edition: Only basic features
+// Projectbeheer items zijn beschikbaar in Extended (port 3003) en Estimator (port 3004)
+const projectManagementItems: { title: string; url: string; icon: typeof Clock }[] = [];
 
 const settingsItems = [
   {
@@ -191,26 +145,29 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Projectbeheer</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {projectManagementItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {/* Projectbeheer - alleen in Extended en Estimator edities */}
+        {projectManagementItems.length > 0 && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Projectbeheer</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {projectManagementItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         <SidebarGroup>
           <SidebarGroupLabel>Beheer</SidebarGroupLabel>

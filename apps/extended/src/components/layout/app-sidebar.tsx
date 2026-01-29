@@ -11,6 +11,8 @@ import {
   Calculator,
   Layers,
   Check,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 import {
   Sidebar,
@@ -88,6 +90,20 @@ const menuItems = [
   },
 ];
 
+// Extended Edition: BIM & Kengetallen features
+const extendedItems = [
+  {
+    title: "BIM Sync",
+    url: "/bim-sync",
+    icon: Building2,
+  },
+  {
+    title: "Kengetallen",
+    url: "/kengetallen",
+    icon: BarChart3,
+  },
+];
+
 const settingsItems = [
   {
     title: "Instellingen",
@@ -124,6 +140,27 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Extended</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {extendedItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

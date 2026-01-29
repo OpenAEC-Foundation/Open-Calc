@@ -447,6 +447,46 @@ async function main() {
     });
   }
 
+  // Create CUSTOM (Eigen) Cost Library
+  const customLibrary = await prisma.costLibrary.upsert({
+    where: { id: "custom-default" },
+    update: {},
+    create: {
+      id: "custom-default",
+      name: "Eigen Kostenbibliotheek",
+      description: "Zelf in te vullen kostenbibliotheek voor eigen kostenposten",
+      version: "2024",
+      standard: "CUSTOM",
+      isPublic: true,
+      isDefault: false,
+    },
+  });
+
+  // CUSTOM Categories (basic categories)
+  const customCategories = [
+    { code: "01", name: "Algemeen", sortOrder: 1 },
+    { code: "02", name: "Bouwkundig", sortOrder: 2 },
+    { code: "03", name: "Installaties", sortOrder: 3 },
+    { code: "04", name: "Afwerking", sortOrder: 4 },
+    { code: "05", name: "Overig", sortOrder: 5 },
+  ];
+
+  for (const cat of customCategories) {
+    await prisma.libraryCategory.upsert({
+      where: {
+        libraryId_code: {
+          libraryId: customLibrary.id,
+          code: cat.code,
+        },
+      },
+      update: {},
+      create: {
+        ...cat,
+        libraryId: customLibrary.id,
+      },
+    });
+  }
+
   // ============================================
   // Create Example Project with Estimate
   // ============================================
@@ -628,6 +668,7 @@ async function main() {
   console.log(`Created NL-SfB library with ${nlsfbItems.length} items`);
   console.log(`Created STABU library with ${stabuItems.length} items`);
   console.log(`Created RAW library with ${rawItems.length} items`);
+  console.log(`Created Eigen (Custom) library: ${customLibrary.name}`);
   console.log(`Created example project: ${exampleProject.name}`);
   console.log(`Created example estimate with ${estimateLines.length} lines`);
   console.log(`Estimate total incl. BTW: €${totalInclVat.toFixed(2)}`);

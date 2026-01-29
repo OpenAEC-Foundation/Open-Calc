@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
-export async function POST(
+// GET - Preview which lines can be updated
+export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string; estimateId: string }> }
 ) {
@@ -29,6 +30,124 @@ export async function POST(
         estimateId,
         libraryItemId: { not: null },
       },
+      include: {
+        libraryItem: true,
+        chapter: {
+          select: {
+            code: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: [
+        { chapter: { sortOrder: "asc" } },
+        { sortOrder: "asc" },
+      ],
+    });
+
+    const updatableLines = [];
+
+    for (const line of lines) {
+      if (!line.libraryItem) continue;
+
+      const lib = line.libraryItem;
+      const newLaborCost = lib.laborHours * lib.laborRate;
+      const newUnitPrice = newLaborCost + lib.materialCost + lib.equipmentCost + lib.subcontrCost;
+
+      // Check if anything changed
+      const hasChanges = !(
+        line.laborHours === lib.laborHours &&
+        line.laborRate === lib.laborRate &&
+        line.materialCost === lib.materialCost &&
+        line.equipmentCost === lib.equipmentCost &&
+        line.subcontrCost === lib.subcontrCost
+      );
+
+      if (hasChanges) {
+        const oldUnitPrice = line.unitPrice;
+        const priceDiff = newUnitPrice - oldUnitPrice;
+        const priceDiffPercent = oldUnitPrice > 0 ? (priceDiff / oldUnitPrice) * 100 : 0;
+
+        updatableLines.push({
+          id: line.id,
+          description: line.description,
+          code: line.code,
+          quantity: line.quantity,
+          unit: line.unit,
+          chapterCode: line.chapter?.code || null,
+          chapterName: line.chapter?.name || null,
+          currentUnitPrice: oldUnitPrice,
+          newUnitPrice: newUnitPrice,
+          priceDiff: priceDiff,
+          priceDiffPercent: priceDiffPercent,
+          currentTotal: line.totalPrice,
+          newTotal: newUnitPrice * line.quantity,
+        });
+      }
+    }
+
+    return NextResponse.json({
+      updatableLines,
+      totalWithLibrary: lines.length,
+    });
+  } catch (error) {
+    console.error("Error fetching updatable prices:", error);
+    return NextResponse.json(
+      { error: "Er is een fout opgetreden" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST - Update selected lines (or all if no lineIds provided)
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string; estimateId: string }> }
+) {
+  try {
+    const userId = await getDefaultUserId();
+    const { id: projectId, estimateId } = await params;
+
+    // Parse request body for optional line IDs
+    let lineIds: string[] | null = null;
+    try {
+      const body = await request.json();
+      if (body.lineIds && Array.isArray(body.lineIds)) {
+        lineIds = body.lineIds;
+      }
+    } catch {
+      // No body or invalid JSON, update all lines
+    }
+
+    // Verify estimate belongs to user
+    const estimate = await prisma.estimate.findFirst({
+      where: {
+        id: estimateId,
+        projectId,
+        project: { userId },
+      },
+    });
+
+    if (!estimate) {
+      return NextResponse.json({ error: "Begroting niet gevonden" }, { status: 404 });
+    }
+
+    // Fetch lines with library items (optionally filtered by lineIds)
+    const whereClause: {
+      estimateId: string;
+      libraryItemId: { not: null };
+      id?: { in: string[] };
+    } = {
+      estimateId,
+      libraryItemId: { not: null },
+    };
+
+    if (lineIds && lineIds.length > 0) {
+      whereClause.id = { in: lineIds };
+    }
+
+    const lines = await prisma.estimateLine.findMany({
+      where: whereClause,
       include: {
         libraryItem: true,
       },
@@ -80,7 +199,9 @@ export async function POST(
       await updateEstimateTotals(estimateId);
     }
 
-    const totalWithLibrary = lines.length;
+    const totalWithLibrary = await prisma.estimateLine.count({
+      where: { estimateId, libraryItemId: { not: null } },
+    });
     const totalWithoutLibrary = await prisma.estimateLine.count({
       where: { estimateId, libraryItemId: null },
     });

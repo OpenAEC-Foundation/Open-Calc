@@ -89,6 +89,22 @@ interface EstimateLine {
   libraryItemId: string | null;
 }
 
+interface UpdatableLine {
+  id: string;
+  description: string;
+  code: string | null;
+  quantity: number;
+  unit: string;
+  chapterCode: string | null;
+  chapterName: string | null;
+  currentUnitPrice: number;
+  newUnitPrice: number;
+  priceDiff: number;
+  priceDiffPercent: number;
+  currentTotal: number;
+  newTotal: number;
+}
+
 const LINE_TYPE_LABELS: Record<string, string> = {
   NORMAL: "Regulier",
   PROVISIONAL: "Stelpost",
@@ -160,6 +176,10 @@ export function EstimateEditor({
   const [exporting, setExporting] = useState(false);
   const [updatingPriceLineId, setUpdatingPriceLineId] = useState<string | null>(null);
   const [updatingAllPrices, setUpdatingAllPrices] = useState(false);
+  const [isPriceUpdateDialogOpen, setIsPriceUpdateDialogOpen] = useState(false);
+  const [updatableLines, setUpdatableLines] = useState<UpdatableLine[]>([]);
+  const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
+  const [loadingUpdatableLines, setLoadingUpdatableLines] = useState(false);
 
   // Chapter form state
   const [chapterCode, setChapterCode] = useState("");
@@ -463,16 +483,72 @@ export function EstimateEditor({
     }
   }
 
-  async function handleUpdateAllPrices() {
-    setUpdatingAllPrices(true);
+  async function openPriceUpdateDialog() {
+    setLoadingUpdatableLines(true);
+    setIsPriceUpdateDialogOpen(true);
     try {
       const response = await fetch(
-        `/api/projects/${projectId}/estimates/${estimateId}/lines/update-prices`,
-        { method: "POST" }
+        `/api/projects/${projectId}/estimates/${estimateId}/lines/update-prices`
       );
 
       if (response.ok) {
         const result = await response.json();
+        setUpdatableLines(result.updatableLines);
+        // Select all by default
+        setSelectedLineIds(new Set(result.updatableLines.map((l: UpdatableLine) => l.id)));
+      } else {
+        alert("Er is een fout opgetreden bij het ophalen van de prijzen");
+        setIsPriceUpdateDialogOpen(false);
+      }
+    } catch (error) {
+      console.error("Error fetching updatable prices:", error);
+      alert("Er is een fout opgetreden bij het ophalen van de prijzen");
+      setIsPriceUpdateDialogOpen(false);
+    } finally {
+      setLoadingUpdatableLines(false);
+    }
+  }
+
+  function toggleLineSelection(lineId: string) {
+    const newSelected = new Set(selectedLineIds);
+    if (newSelected.has(lineId)) {
+      newSelected.delete(lineId);
+    } else {
+      newSelected.add(lineId);
+    }
+    setSelectedLineIds(newSelected);
+  }
+
+  function selectAllLines() {
+    setSelectedLineIds(new Set(updatableLines.map(l => l.id)));
+  }
+
+  function deselectAllLines() {
+    setSelectedLineIds(new Set());
+  }
+
+  async function handleUpdateSelectedPrices() {
+    if (selectedLineIds.size === 0) {
+      alert("Selecteer minimaal één regel om bij te werken");
+      return;
+    }
+
+    setUpdatingAllPrices(true);
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/estimates/${estimateId}/lines/update-prices`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lineIds: Array.from(selectedLineIds) }),
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        setIsPriceUpdateDialogOpen(false);
+        setUpdatableLines([]);
+        setSelectedLineIds(new Set());
         alert(result.message);
         if (result.updatedCount > 0) {
           router.refresh();
@@ -481,7 +557,7 @@ export function EstimateEditor({
         alert("Er is een fout opgetreden bij het bijwerken van de prijzen");
       }
     } catch (error) {
-      console.error("Error updating all prices:", error);
+      console.error("Error updating selected prices:", error);
       alert("Er is een fout opgetreden bij het bijwerken van de prijzen");
     } finally {
       setUpdatingAllPrices(false);
@@ -699,8 +775,8 @@ export function EstimateEditor({
           Uit bibliotheek
         </Button>
 
-        <Button variant="outline" onClick={handleUpdateAllPrices} disabled={updatingAllPrices}>
-          {updatingAllPrices ? (
+        <Button variant="outline" onClick={openPriceUpdateDialog} disabled={loadingUpdatableLines}>
+          {loadingUpdatableLines ? (
             <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
           ) : (
             <RefreshCw className="mr-2 h-4 w-4" />
@@ -1490,6 +1566,169 @@ export function EstimateEditor({
             <Button onClick={handleUpdateLine} disabled={loading || !lineDescription}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Opslaan"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Price Update Selection Dialog */}
+      <Dialog open={isPriceUpdateDialogOpen} onOpenChange={(open) => {
+        setIsPriceUpdateDialogOpen(open);
+        if (!open) {
+          setUpdatableLines([]);
+          setSelectedLineIds(new Set());
+        }
+      }}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Prijzen actualiseren
+            </DialogTitle>
+            <DialogDescription>
+              Selecteer de regels waarvan je de prijzen wilt bijwerken vanuit de bibliotheek
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingUpdatableLines ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : updatableLines.length === 0 ? (
+            <div className="text-center py-12">
+              <RefreshCw className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">Geen prijswijzigingen</h3>
+              <p className="text-muted-foreground">
+                Alle prijzen in de begroting zijn al actueel met de bibliotheek.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-between py-2">
+                <div className="text-sm text-muted-foreground">
+                  {selectedLineIds.size} van {updatableLines.length} geselecteerd
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={selectAllLines}>
+                    Alles selecteren
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={deselectAllLines}>
+                    Niets selecteren
+                  </Button>
+                </div>
+              </div>
+
+              <ScrollArea className="h-[400px] border rounded-lg">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[50px]"></TableHead>
+                      <TableHead className="min-w-[250px]">Omschrijving</TableHead>
+                      <TableHead className="w-[120px] text-right">Huidige prijs</TableHead>
+                      <TableHead className="w-[120px] text-right">Nieuwe prijs</TableHead>
+                      <TableHead className="w-[120px] text-right">Verschil</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {updatableLines.map((line) => (
+                      <TableRow
+                        key={line.id}
+                        className={`cursor-pointer hover:bg-muted/50 ${
+                          selectedLineIds.has(line.id) ? "bg-blue-50" : ""
+                        }`}
+                        onClick={() => toggleLineSelection(line.id)}
+                      >
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedLineIds.has(line.id)}
+                            onCheckedChange={() => toggleLineSelection(line.id)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium">{line.description}</p>
+                            <div className="flex gap-2 text-xs text-muted-foreground">
+                              {line.chapterCode && (
+                                <span>Hoofdstuk {line.chapterCode}</span>
+                              )}
+                              <span>{line.quantity} {line.unit}</span>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {formatCurrency(line.currentUnitPrice)}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          {formatCurrency(line.newUnitPrice)}
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <div className={`${
+                            line.priceDiff > 0
+                              ? "text-red-600"
+                              : line.priceDiff < 0
+                              ? "text-green-600"
+                              : ""
+                          }`}>
+                            <div>{line.priceDiff > 0 ? "+" : ""}{formatCurrency(line.priceDiff)}</div>
+                            <div className="text-xs">
+                              ({line.priceDiff > 0 ? "+" : ""}{line.priceDiffPercent.toFixed(1)}%)
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+
+              {/* Summary */}
+              {selectedLineIds.size > 0 && (
+                <div className="bg-muted p-3 rounded-lg">
+                  <div className="flex justify-between text-sm">
+                    <span>Totaal verschil geselecteerde regels:</span>
+                    <span className={`font-medium ${
+                      updatableLines
+                        .filter(l => selectedLineIds.has(l.id))
+                        .reduce((sum, l) => sum + (l.newTotal - l.currentTotal), 0) > 0
+                        ? "text-red-600"
+                        : "text-green-600"
+                    }`}>
+                      {formatCurrency(
+                        updatableLines
+                          .filter(l => selectedLineIds.has(l.id))
+                          .reduce((sum, l) => sum + (l.newTotal - l.currentTotal), 0)
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsPriceUpdateDialogOpen(false);
+                setUpdatableLines([]);
+                setSelectedLineIds(new Set());
+              }}
+            >
+              Annuleren
+            </Button>
+            {updatableLines.length > 0 && (
+              <Button
+                onClick={handleUpdateSelectedPrices}
+                disabled={updatingAllPrices || selectedLineIds.size === 0}
+              >
+                {updatingAllPrices ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {selectedLineIds.size} regel(s) bijwerken
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

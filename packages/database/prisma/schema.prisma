@@ -39,6 +39,9 @@ model User {
   defaultMarkup     Float   @default(10)  // Default opslag %
   defaultLaborRate  Float   @default(45)  // Default uurloon
 
+  // Application URL (for payment links etc.)
+  appUrl            String?   // Public URL of the application (e.g., https://app.mijnbedrijf.nl)
+
   // ERPNext Integration
   erpnextUrl        String?   // ERPNext instance URL
   erpnextApiKey     String?   // ERPNext API Key

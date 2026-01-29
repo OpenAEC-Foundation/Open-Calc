@@ -329,6 +329,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
               placeholder="NL00 BANK 0123 4567 89"
             />
           </div>
+
         </CardContent>
       </Card>
 

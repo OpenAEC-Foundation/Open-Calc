@@ -2,9 +2,8 @@ import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
   Table,
@@ -36,22 +35,7 @@ import { EstimateEditor } from "./estimate-editor";
 import { EstimateSettings } from "./estimate-settings";
 import { EstimateVersions } from "./estimate-versions";
 import { OfferSpecification } from "./offer-specification";
-
-const statusColors: Record<string, string> = {
-  DRAFT: "bg-gray-100 text-gray-800",
-  SENT: "bg-blue-100 text-blue-800",
-  ACCEPTED: "bg-green-100 text-green-800",
-  REJECTED: "bg-red-100 text-red-800",
-  EXPIRED: "bg-orange-100 text-orange-800",
-};
-
-const statusLabels: Record<string, string> = {
-  DRAFT: "Concept",
-  SENT: "Verzonden",
-  ACCEPTED: "Geaccepteerd",
-  REJECTED: "Afgewezen",
-  EXPIRED: "Verlopen",
-};
+import { EstimateHeader } from "./estimate-header";
 
 async function getEstimate(estimateId: string, projectId: string, userId: string) {
   const estimate = await prisma.estimate.findFirst({
@@ -162,13 +146,13 @@ export default async function EstimateDetailPage({
             </Link>
           </Button>
           <div>
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold tracking-tight">{estimate.name}</h1>
-              <Badge className={statusColors[estimate.status]}>
-                {statusLabels[estimate.status]}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2 text-muted-foreground">
+            <EstimateHeader
+              estimateId={estimateId}
+              projectId={projectId}
+              name={estimate.name}
+              status={estimate.status}
+            />
+            <div className="flex items-center gap-2 text-muted-foreground mt-1">
               <Link href={`/projects/${projectId}`} className="hover:underline">
                 {estimate.project.name}
               </Link>
@@ -208,7 +192,7 @@ export default async function EstimateDetailPage({
               <DropdownMenuItem asChild>
                 <Link href={`/api/projects/${projectId}/estimates/${estimateId}/export/pdf`}>
                   <FileText className="mr-2 h-4 w-4" />
-                  PDF Offerte
+                  PDF Exporteren
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
@@ -244,14 +228,10 @@ export default async function EstimateDetailPage({
             estimateId={estimateId}
             projectId={projectId}
             initialData={{
-              name: estimate.name,
-              description: estimate.description,
-              status: estimate.status,
               generalCostsPercent: estimate.generalCostsPercent,
               profitPercent: estimate.profitPercent,
               riskPercent: estimate.riskPercent,
               vatPercent: estimate.vatPercent,
-              validUntil: estimate.validUntil?.toISOString() ?? null,
               notes: estimate.notes,
             }}
           />

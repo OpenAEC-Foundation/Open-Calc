@@ -11,6 +11,12 @@ import {
   Calculator,
   Layers,
   Check,
+  Building2,
+  BarChart3,
+  FileSpreadsheet,
+  Calendar,
+  Receipt,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -88,6 +94,44 @@ const menuItems = [
   },
 ];
 
+// Extended features (also available in Estimator)
+const extendedItems = [
+  {
+    title: "BIM Sync",
+    url: "/bim-sync",
+    icon: Building2,
+  },
+  {
+    title: "Kengetallen",
+    url: "/kengetallen",
+    icon: BarChart3,
+  },
+];
+
+// Estimator Pro: Projectbeheer features
+const projectManagementItems = [
+  {
+    title: "Offertes",
+    url: "/offertes",
+    icon: FileSpreadsheet,
+  },
+  {
+    title: "Planning",
+    url: "/planning",
+    icon: Calendar,
+  },
+  {
+    title: "Facturatie",
+    url: "/invoices",
+    icon: Receipt,
+  },
+  {
+    title: "Nacalculatie",
+    url: "/nacalculatie",
+    icon: TrendingUp,
+  },
+];
+
 const settingsItems = [
   {
     title: "Instellingen",
@@ -124,6 +168,48 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Extended</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {extendedItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.url || pathname.startsWith(item.url + "/")}
+                  >
+                    <Link href={item.url}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <SidebarGroupLabel>Projectbeheer</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {projectManagementItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild

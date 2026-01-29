@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -22,8 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Library, Filter, FileText, ChevronDown, ChevronUp, Edit, Image } from "lucide-react";
+import { Search, Library, Filter, FileText, ChevronDown, ChevronUp, Edit, Image, RefreshCw, Plus } from "lucide-react";
 import { LibraryItemDialog } from "./library-item-dialog";
+import { MarketPriceUpdateDialog } from "./market-price-update-dialog";
+import { AddItemDialog } from "./add-item-dialog";
 
 interface CostLibrary {
   id: string;
@@ -89,8 +91,18 @@ export function LibraryBrowser({
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [editItemId, setEditItemId] = useState<string | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [marketPriceDialogOpen, setMarketPriceDialogOpen] = useState(false);
+  const [marketPriceLibraryId, setMarketPriceLibraryId] = useState<string | undefined>();
+  const [marketPriceLibraryName, setMarketPriceLibraryName] = useState<string | undefined>();
+  const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
 
   const currentLibrary = libraries.find((l) => l.id === selectedLibrary);
+
+  function openMarketPriceDialog(libraryId?: string, libraryName?: string) {
+    setMarketPriceLibraryId(libraryId);
+    setMarketPriceLibraryName(libraryName);
+    setMarketPriceDialogOpen(true);
+  }
 
   function toggleExpand(itemId: string) {
     const newExpanded = new Set(expandedItems);
@@ -170,6 +182,29 @@ export function LibraryBrowser({
           <Button type="submit">Zoeken</Button>
         </form>
 
+        <Button
+          variant="default"
+          onClick={() => setAddItemDialogOpen(true)}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Toevoegen
+        </Button>
+
+        <Button
+          variant="outline"
+          onClick={() =>
+            openMarketPriceDialog(
+              currentLibrary?.id,
+              currentLibrary
+                ? `${standardLabels[currentLibrary.standard]}`
+                : "Alle bibliotheken"
+            )
+          }
+        >
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Prijzen actualiseren
+        </Button>
+
         {currentLibrary && currentLibrary.categories.length > 0 && (
           <Select
             value={selectedCategory || "all"}
@@ -229,9 +264,8 @@ export function LibraryBrowser({
                 </TableHeader>
                 <TableBody>
                   {items.map((item) => (
-                    <>
+                    <React.Fragment key={item.id}>
                       <TableRow
-                        key={item.id}
                         className="cursor-pointer hover:bg-muted/50"
                         onClick={() => item.specification && toggleExpand(item.id)}
                       >
@@ -312,7 +346,7 @@ export function LibraryBrowser({
                         </TableCell>
                       </TableRow>
                       {item.specification && expandedItems.has(item.id) && (
-                        <TableRow key={`${item.id}-spec`} className="bg-muted/30">
+                        <TableRow className="bg-muted/30">
                           <TableCell colSpan={7} className="p-4">
                             <div className="bg-background rounded-lg p-4 border">
                               <h4 className="font-medium mb-2 flex items-center gap-2">
@@ -326,7 +360,7 @@ export function LibraryBrowser({
                           </TableCell>
                         </TableRow>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -339,6 +373,20 @@ export function LibraryBrowser({
         itemId={editItemId}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+      />
+
+      <MarketPriceUpdateDialog
+        open={marketPriceDialogOpen}
+        onOpenChange={setMarketPriceDialogOpen}
+        libraryId={marketPriceLibraryId}
+        libraryName={marketPriceLibraryName}
+      />
+
+      <AddItemDialog
+        open={addItemDialogOpen}
+        onOpenChange={setAddItemDialogOpen}
+        libraries={libraries}
+        selectedLibraryId={selectedLibrary}
       />
     </div>
   );

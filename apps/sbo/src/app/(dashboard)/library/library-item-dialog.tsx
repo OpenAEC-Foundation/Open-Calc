@@ -22,7 +22,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
-import { Loader2, Save, X, Trash2, Image as ImageIcon } from "lucide-react";
+import { Loader2, Save, X, Trash2, Image as ImageIcon, RefreshCw, TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface LibraryItemImage {
   id: string;
@@ -101,6 +107,27 @@ export function LibraryItemDialog({
   const [specification, setSpecification] = useState("");
   const [activeTab, setActiveTab] = useState("details");
 
+  // Editable price fields
+  const [unit, setUnit] = useState("");
+  const [laborHours, setLaborHours] = useState("");
+  const [laborRate, setLaborRate] = useState("");
+  const [materialCost, setMaterialCost] = useState("");
+  const [equipmentCost, setEquipmentCost] = useState("");
+  const [subcontrCost, setSubcontrCost] = useState("");
+
+  // Market price update state
+  const [fetchingMarketPrice, setFetchingMarketPrice] = useState(false);
+  const [marketPriceData, setMarketPriceData] = useState<{
+    laborRate: number;
+    materialCost: number;
+    equipmentCost: number;
+    subcontrCost: number;
+    unitPrice: number;
+    source: string;
+    confidence: number;
+    percentageChange: number;
+  } | null>(null);
+
   useEffect(() => {
     if (open && itemId) {
       fetchItem(itemId);
@@ -108,6 +135,13 @@ export function LibraryItemDialog({
       setItem(null);
       setOfferText("");
       setSpecification("");
+      setUnit("");
+      setLaborHours("");
+      setLaborRate("");
+      setMaterialCost("");
+      setEquipmentCost("");
+      setSubcontrCost("");
+      setMarketPriceData(null);
     }
   }, [open, itemId]);
 
@@ -120,6 +154,12 @@ export function LibraryItemDialog({
         setItem(data);
         setOfferText(data.offerText || "");
         setSpecification(data.specification || "");
+        setUnit(data.unit || "");
+        setLaborHours(data.laborHours?.toString() || "0");
+        setLaborRate(data.laborRate?.toString() || "45");
+        setMaterialCost(data.materialCost?.toString() || "0");
+        setEquipmentCost(data.equipmentCost?.toString() || "0");
+        setSubcontrCost(data.subcontrCost?.toString() || "0");
       }
     } catch (error) {
       console.error("Error fetching item:", error);
@@ -128,17 +168,76 @@ export function LibraryItemDialog({
     }
   }
 
+  // Calculate unit price from components
+  function calculateUnitPrice(): number {
+    const hours = parseFloat(laborHours) || 0;
+    const rate = parseFloat(laborRate) || 0;
+    const material = parseFloat(materialCost) || 0;
+    const equipment = parseFloat(equipmentCost) || 0;
+    const subcontr = parseFloat(subcontrCost) || 0;
+    return (hours * rate) + material + equipment + subcontr;
+  }
+
+  async function fetchMarketPrice() {
+    if (!item) return;
+
+    setFetchingMarketPrice(true);
+    setMarketPriceData(null);
+    try {
+      const response = await fetch(`/api/library/market-prices?itemId=${item.id}`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.updates && data.updates.length > 0) {
+          const update = data.updates[0];
+          setMarketPriceData({
+            laborRate: update.marketPrices.laborRate,
+            materialCost: update.marketPrices.materialCost,
+            equipmentCost: update.marketPrices.equipmentCost,
+            subcontrCost: update.marketPrices.subcontrCost,
+            unitPrice: update.marketPrices.unitPrice,
+            source: update.source,
+            confidence: update.confidence,
+            percentageChange: update.percentageChange,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching market price:", error);
+    } finally {
+      setFetchingMarketPrice(false);
+    }
+  }
+
+  function applyMarketPrices() {
+    if (!marketPriceData) return;
+
+    setLaborRate(marketPriceData.laborRate.toString());
+    setMaterialCost(marketPriceData.materialCost.toString());
+    setEquipmentCost(marketPriceData.equipmentCost.toString());
+    setSubcontrCost(marketPriceData.subcontrCost.toString());
+    setMarketPriceData(null);
+  }
+
   async function handleSave() {
     if (!item) return;
 
     setSaving(true);
     try {
+      const calculatedUnitPrice = calculateUnitPrice();
+
       const response = await fetch(`/api/library/${item.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           specification,
           offerText,
+          unit,
+          laborHours: parseFloat(laborHours) || 0,
+          laborRate: parseFloat(laborRate) || 0,
+          materialCost: parseFloat(materialCost) || 0,
+          equipmentCost: parseFloat(equipmentCost) || 0,
+          subcontrCost: parseFloat(subcontrCost) || 0,
+          unitPrice: calculatedUnitPrice,
         }),
       });
 
@@ -256,56 +355,183 @@ export function LibraryItemDialog({
               <TabsContent value="details" className="flex-1 overflow-auto">
                 <div className="grid grid-cols-2 gap-4 py-4">
                   <div className="space-y-2">
-                    <Label>Eenheid</Label>
-                    <Input value={item.unit} readOnly className="bg-muted" />
+                    <Label htmlFor="unit">Eenheid</Label>
+                    <Input
+                      id="unit"
+                      value={unit}
+                      onChange={(e) => setUnit(e.target.value)}
+                      placeholder="m2, st, uur, etc."
+                    />
                   </div>
                   <div className="space-y-2">
                     <Label>Eenheidsprijs</Label>
+                    <div className="flex items-center h-10 px-3 rounded-md border bg-muted font-medium">
+                      {formatCurrency(calculateUnitPrice())}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Berekend uit onderstaande kosten
+                    </p>
+                  </div>
+
+                  {/* Market Price Update Section */}
+                  <div className="col-span-2 border rounded-lg p-4 bg-muted/30">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <Label className="text-sm font-medium">Marktprijs actualiseren</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Vergelijk met actuele marktprijzen
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchMarketPrice}
+                        disabled={fetchingMarketPrice}
+                      >
+                        {fetchingMarketPrice ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Ophalen...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Marktprijs ophalen
+                          </>
+                        )}
+                      </Button>
+                    </div>
+
+                    {marketPriceData && (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Uurtarief:</span>
+                            <span className={marketPriceData.laborRate > parseFloat(laborRate) ? "text-orange-600" : "text-green-600"}>
+                              {formatCurrency(marketPriceData.laborRate)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Materiaal:</span>
+                            <span className={marketPriceData.materialCost > parseFloat(materialCost) ? "text-orange-600" : "text-green-600"}>
+                              {formatCurrency(marketPriceData.materialCost)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Materieel:</span>
+                            <span className={marketPriceData.equipmentCost > parseFloat(equipmentCost) ? "text-orange-600" : "text-green-600"}>
+                              {formatCurrency(marketPriceData.equipmentCost)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Onderaann.:</span>
+                            <span className={marketPriceData.subcontrCost > parseFloat(subcontrCost) ? "text-orange-600" : "text-green-600"}>
+                              {formatCurrency(marketPriceData.subcontrCost)}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">
+                              Nieuwe eenheidsprijs: {formatCurrency(marketPriceData.unitPrice)}
+                            </span>
+                            <span className={`flex items-center gap-1 text-sm ${
+                              marketPriceData.percentageChange > 0 ? "text-orange-600" : "text-green-600"
+                            }`}>
+                              {marketPriceData.percentageChange > 0 ? (
+                                <TrendingUp className="h-4 w-4" />
+                              ) : (
+                                <TrendingDown className="h-4 w-4" />
+                              )}
+                              {marketPriceData.percentageChange > 0 ? "+" : ""}
+                              {marketPriceData.percentageChange}%
+                            </span>
+                          </div>
+                          <Button size="sm" onClick={applyMarketPrices}>
+                            Toepassen
+                          </Button>
+                        </div>
+
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <ExternalLink className="h-3 w-3" />
+                          <span>Bron: {marketPriceData.source}</span>
+                          <span>•</span>
+                          <span>Betrouwbaarheid: {marketPriceData.confidence}%</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="laborHours">Arbeid (uren)</Label>
                     <Input
-                      value={formatCurrency(item.unitPrice)}
-                      readOnly
-                      className="bg-muted font-medium"
+                      id="laborHours"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={laborHours}
+                      onChange={(e) => setLaborHours(e.target.value)}
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Arbeid (uren)</Label>
-                    <Input
-                      value={item.laborHours.toFixed(2)}
-                      readOnly
-                      className="bg-muted"
-                    />
+                    <Label htmlFor="laborRate">Uurtarief</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                      <Input
+                        id="laborRate"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={laborRate}
+                        onChange={(e) => setLaborRate(e.target.value)}
+                        className="pl-7"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Uurtarief</Label>
-                    <Input
-                      value={formatCurrency(item.laborRate)}
-                      readOnly
-                      className="bg-muted"
-                    />
+                    <Label htmlFor="materialCost">Materiaalkosten</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                      <Input
+                        id="materialCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={materialCost}
+                        onChange={(e) => setMaterialCost(e.target.value)}
+                        className="pl-7"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Materiaalkosten</Label>
-                    <Input
-                      value={formatCurrency(item.materialCost)}
-                      readOnly
-                      className="bg-muted"
-                    />
+                    <Label htmlFor="equipmentCost">Materieelkosten</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                      <Input
+                        id="equipmentCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={equipmentCost}
+                        onChange={(e) => setEquipmentCost(e.target.value)}
+                        className="pl-7"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label>Materieelkosten</Label>
-                    <Input
-                      value={formatCurrency(item.equipmentCost)}
-                      readOnly
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Onderaanneming</Label>
-                    <Input
-                      value={formatCurrency(item.subcontrCost)}
-                      readOnly
-                      className="bg-muted"
-                    />
+                    <Label htmlFor="subcontrCost">Onderaanneming</Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">€</span>
+                      <Input
+                        id="subcontrCost"
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={subcontrCost}
+                        onChange={(e) => setSubcontrCost(e.target.value)}
+                        className="pl-7"
+                      />
+                    </div>
                   </div>
                 </div>
               </TabsContent>
