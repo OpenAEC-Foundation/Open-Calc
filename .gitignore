@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files - development .env is committed, production overrides are not
+.env.local
+.env.production
+.env.production.local
+.env*.local
 
 # credentials - NEVER commit
 github-credentials*.md
