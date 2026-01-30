@@ -286,21 +286,26 @@ export async function GET(
       doc.setFont("helvetica", "bold");
       doc.setFontSize(9);
       doc.text("Code", 25, yPos);
-      doc.text("Omschrijving", 50, yPos);
+      doc.text("Omschrijving", 45, yPos);
+      doc.text("Uren", 130, yPos, { align: "right" });
       doc.text("Bedrag", pageWidth - 25, yPos, { align: "right" });
 
       // Table rows
       yPos += 8;
       doc.setFont("helvetica", "normal");
 
+      let totalHours = 0;
       for (const chapter of estimate.chapters) {
         const chapterTotal = chapter.lines.reduce((sum, line) => sum + line.totalPrice, 0);
+        const chapterHours = chapter.lines.reduce((sum, line) => sum + (line.laborHours * line.quantity), 0);
+        totalHours += chapterHours;
 
         doc.setDrawColor(230);
         doc.line(20, yPos + 2, pageWidth - 20, yPos + 2);
 
         doc.text(chapter.code, 25, yPos);
-        doc.text(chapter.name.substring(0, 50), 50, yPos);
+        doc.text(chapter.name.substring(0, 40), 45, yPos);
+        doc.text(chapterHours.toFixed(1), 130, yPos, { align: "right" });
         doc.text(formatCurrency(chapterTotal), pageWidth - 25, yPos, { align: "right" });
 
         yPos += 7;
@@ -315,10 +320,13 @@ export async function GET(
       // Add unassigned lines total if any
       if (estimate.lines && estimate.lines.length > 0) {
         const unassignedTotal = estimate.lines.reduce((sum, line) => sum + line.totalPrice, 0);
+        const unassignedHours = estimate.lines.reduce((sum, line) => sum + (line.laborHours * line.quantity), 0);
+        totalHours += unassignedHours;
         doc.setDrawColor(230);
         doc.line(20, yPos + 2, pageWidth - 20, yPos + 2);
         doc.text("-", 25, yPos);
-        doc.text("Overige posten", 50, yPos);
+        doc.text("Overige posten", 45, yPos);
+        doc.text(unassignedHours.toFixed(1), 130, yPos, { align: "right" });
         doc.text(formatCurrency(unassignedTotal), pageWidth - 25, yPos, { align: "right" });
         yPos += 7;
       }
@@ -328,7 +336,8 @@ export async function GET(
       doc.setDrawColor(200);
       doc.line(20, yPos - 2, pageWidth - 20, yPos - 2);
       doc.setFont("helvetica", "bold");
-      doc.text("Subtotaal", 50, yPos + 3);
+      doc.text("Subtotaal", 45, yPos + 3);
+      doc.text(totalHours.toFixed(1), 130, yPos + 3, { align: "right" });
       doc.text(formatCurrency(estimate.subtotal), pageWidth - 25, yPos + 3, { align: "right" });
     }
 
@@ -409,26 +418,35 @@ export async function GET(
       doc.setFont("helvetica", "bold");
       doc.setTextColor(0, 102, 204);
       doc.text("Gedetailleerde Begroting", 20, yPos);
-      yPos += 10;
+      yPos += 15;
 
       for (const chapter of estimate.chapters) {
-        // Chapter header
-        if (yPos > 240) {
+        // Calculate chapter stats
+        const chapterTotal = chapter.lines.reduce((sum, line) => sum + line.totalPrice, 0);
+        const chapterHours = chapter.lines.reduce((sum, line) => sum + (line.laborHours * line.quantity), 0);
+
+        // Check if chapter fits on page, if not start new page
+        const estimatedChapterHeight = 15 + (chapter.lines.length * 10);
+        if (yPos > 240 || (yPos + Math.min(estimatedChapterHeight, 60) > 270)) {
           addFooter();
           doc.addPage();
           yPos = addPageHeader("Gedetailleerde Begroting");
         }
 
+        // Chapter header with background
         doc.setFillColor(230, 240, 250);
-        doc.rect(20, yPos - 4, pageWidth - 40, 8, "F");
+        doc.rect(20, yPos - 5, pageWidth - 40, 10, "F");
         doc.setFontSize(11);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0);
         doc.text(`${chapter.code} ${chapter.name}`, 25, yPos);
 
-        const chapterTotal = chapter.lines.reduce((sum, line) => sum + line.totalPrice, 0);
+        // Chapter totals (hours and amount)
+        doc.setFontSize(9);
+        doc.text(`${chapterHours.toFixed(1)} uur`, 140, yPos, { align: "right" });
+        doc.setFontSize(11);
         doc.text(formatCurrency(chapterTotal), pageWidth - 25, yPos, { align: "right" });
-        yPos += 10;
+        yPos += 12;
 
         // Table header for lines - improved column positions
         // Columns: Code(20-35), Omschrijving(37-95), Aantal(97-112), Eenh(114-125), Prijs(127-155), Totaal(157-190)

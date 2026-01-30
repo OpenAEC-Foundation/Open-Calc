@@ -1,0 +1,24 @@
+{
+  "name": "@opencalc/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server voor OpenCalc - maak begrotingen via AI prompts",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "opencalc-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@prisma/client": "^6.2.1",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2"
+  }
+}

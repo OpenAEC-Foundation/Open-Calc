@@ -2,6 +2,10 @@ import { getDefaultUserId } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { SettingsForm } from "./settings-form";
 
+// Force dynamic rendering - don't cache this page
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 async function getUserSettings(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Save, Upload, Trash2, Building2, CreditCard, Link as LinkIcon, Eye, EyeOff } from "lucide-react";
+import { Loader2, Save, Upload, Trash2, Building2, CreditCard, Link as LinkIcon, Eye, EyeOff, Check } from "lucide-react";
 
 interface User {
   id: string;
@@ -39,6 +39,7 @@ export function SettingsForm({ user }: SettingsFormProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [showApiSecret, setShowApiSecret] = useState(false);
 
@@ -115,6 +116,8 @@ export function SettingsForm({ user }: SettingsFormProps) {
       });
 
       if (response.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 3000);
         router.refresh();
       }
     } catch (error) {
@@ -446,7 +449,13 @@ export function SettingsForm({ user }: SettingsFormProps) {
       </Card>
 
       {/* Submit Button */}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-4 items-center">
+        {saved && (
+          <span className="text-green-600 flex items-center gap-1 text-sm">
+            <Check className="h-4 w-4" />
+            Instellingen opgeslagen!
+          </span>
+        )}
         <Button type="submit" disabled={saving}>
           {saving ? (
             <>

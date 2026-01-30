@@ -219,18 +219,18 @@ export async function GET(
     wsChapters["!cols"] = [{ wch: 10 }, { wch: 40 }, { wch: 15 }];
     XLSX.utils.book_append_sheet(wb, wsChapters, "Per Hoofdstuk");
 
-    // Generate ODS file
-    const odsBuffer = XLSX.write(wb, { bookType: "ods", type: "buffer" });
+    // Generate XLSX file (Excel format supports formulas better than ODS)
+    const xlsxBuffer = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
 
     // Create filename
     const safeName = estimate.project.name
       .replace(/[^a-zA-Z0-9]/g, "_")
       .substring(0, 50);
-    const filename = `${safeName}_begroting_v${estimate.version}.ods`;
+    const filename = `${safeName}_begroting_v${estimate.version}.xlsx`;
 
-    return new Response(odsBuffer, {
+    return new Response(xlsxBuffer, {
       headers: {
-        "Content-Type": "application/vnd.oasis.opendocument.spreadsheet",
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         "Content-Disposition": `attachment; filename="${filename}"`,
       },
     });

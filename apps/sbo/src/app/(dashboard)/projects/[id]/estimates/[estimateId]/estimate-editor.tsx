@@ -181,6 +181,12 @@ export function EstimateEditor({
   const [selectedLineIds, setSelectedLineIds] = useState<Set<string>>(new Set());
   const [loadingUpdatableLines, setLoadingUpdatableLines] = useState(false);
 
+  // Chapter edit state
+  const [isEditingChapter, setIsEditingChapter] = useState(false);
+  const [editingChapterId, setEditingChapterId] = useState<string | null>(null);
+  const [editChapterName, setEditChapterName] = useState("");
+  const [editChapterCode, setEditChapterCode] = useState("");
+
   // Chapter form state
   const [chapterCode, setChapterCode] = useState("");
   const [chapterName, setChapterName] = useState("");
@@ -374,6 +380,44 @@ export function EstimateEditor({
       }
     } catch (error) {
       console.error("Error deleting chapter:", error);
+    }
+  }
+
+  function openEditChapterDialog(chapter: EstimateChapter) {
+    setEditingChapterId(chapter.id);
+    setEditChapterCode(chapter.code);
+    setEditChapterName(chapter.name);
+    setIsEditingChapter(true);
+  }
+
+  async function handleUpdateChapter() {
+    if (!editChapterName || !editingChapterId) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(
+        `/api/projects/${projectId}/estimates/${estimateId}/chapters/${editingChapterId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            code: editChapterCode,
+            name: editChapterName,
+          }),
+        }
+      );
+
+      if (response.ok) {
+        setIsEditingChapter(false);
+        setEditingChapterId(null);
+        setEditChapterCode("");
+        setEditChapterName("");
+        router.refresh();
+      }
+    } catch (error) {
+      console.error("Error updating chapter:", error);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -865,6 +909,19 @@ export function EstimateEditor({
                         <span className="text-sm text-muted-foreground">
                           {chapter.lines.length} regels
                         </span>
+                        <span className="text-sm text-muted-foreground">
+                          {chapter.lines.reduce((sum, line) => sum + (line.laborHours * line.quantity), 0).toFixed(1)} uur
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditChapterDialog(chapter);
+                          }}
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground hover:text-blue-600" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"
