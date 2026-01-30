@@ -39,7 +39,11 @@
       "Bash(npx next dev:*)",
       "Bash(DATABASE_URL=\"file:C:/Users/MartijnvanderKolk/Documents/GitHub/Open-Calc/prisma/dev.db\" npx prisma db seed:*)",
       "mcp__filesystem__directory_tree",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "Bash(git diff:*)",
+      "Bash(git commit:*)",
+      "Bash(git rm:*)",
+      "Bash(bash:*)"
     ]
   }
 }
