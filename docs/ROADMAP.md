@@ -54,7 +54,7 @@ Uitgebreide versie met BIM-integratie en kennisgetallen berekening. Gebaseerd op
 ### OpenCalc Estimator
 **Doelgroep:** Professionele calculators, grote aannemers (BAM, Dura Vermeer niveau)
 
-De complete enterprise versie voor professionele calculatiekantoren en grote bouwbedrijven. Gemodelleerd naar de functionaliteit van IBIS Calculeren en Cleopatra Enterprise.
+De complete enterprise versie voor professionele calculatiekantoren en grote bouwbedrijven. Biedt uitgebreide functionaliteit vergelijkbaar met toonaangevende calculatiesoftware in de sector.
 
 **Alle Extended features plus:**
 
@@ -109,8 +109,8 @@ De complete enterprise versie voor professionele calculatiekantoren en grote bou
 
 **Integraties:**
 - Volledige REST API met OpenAPI docs
-- CUF import/export (IBIS compatibel)
-- ERP koppelingen (AFAS, Exact, 4PS)
+- CUF import/export (standaard calculatie uitwisselingsformaat)
+- ERP koppelingen (diverse Nederlandse ERP-systemen)
 - BIM/IFC import (volledig)
 - CO2 calculatie (zoals Dura Vermeer BLCM)
 
@@ -345,10 +345,9 @@ Gebaseerd op "BIM & €" presentatie:
   - [ ] As-built terugkoppeling
 
 ### Fase 6: Integraties (Week 29-32)
-- [ ] CUF import/export (IBIS compatibel)
+- [ ] CUF import/export (standaard uitwisselingsformaat)
 - [ ] ERP connectors
-  - [ ] AFAS koppeling
-  - [ ] Exact koppeling
+  - [ ] Diverse Nederlandse ERP-systemen
 - [ ] Volledige IFC import
 - [ ] API key management
 - [ ] Webhooks
@@ -746,8 +745,7 @@ export const EDITION_FEATURES = {
 ## Referenties
 
 - [BIM & € Presentatie (GAF)](./references/888.888-bim-euro.pdf) - Basis voor kennisgetallen en BIM integratie
-- [IBIS Calculeren](https://www.ibis.nl/) - Referentie voor enterprise features
-- [CUF Formaat](https://www.ibis.nl/kennisbank/wat-is-calculatie-uitwisselings-formaat-cuf) - Standaard uitwisselingsformaat
+- [CUF Formaat](https://ketenstandaard.nl/standaard/cuf/) - Standaard calculatie uitwisselingsformaat
 - [NL-SfB](https://ketenstandaard.nl/standaard/nl-sfb/) - Elementenmethode classificatie
 
 ---
